@@ -1,8 +1,7 @@
 import axios from 'axios';
 
 // Usar variable de entorno VITE_API_URL o localhost para desarrollo local
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
+const API_URL = import.meta.env.VITE_API_URL;
 const api = axios.create({
   baseURL: API_URL,
   headers: {
