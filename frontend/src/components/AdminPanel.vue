@@ -1,16 +1,33 @@
 <template>
   <div class="admin-panel">
-    <div class="panel-header">
-      <h2>📊 Panel Administrativo</h2>
-      <button @click="cargarReportes" class="btn btn-secondary" :disabled="loading">
-        🔄 Actualizar
-      </button>
+    <!-- Vista de Gestión de Usuarios -->
+    <AdminUsers v-if="mostrarUsuarios" @volver="mostrarUsuarios = false" />
+    
+    <!-- Vista de Editor de Menú/Mesas -->
+    <EditorPanel v-else-if="mostrarEditor" @volver="mostrarEditor = false" />
+
+    <!-- Vista Principal del Dashboard -->
+    <div v-else class="dashboard-view">
+      <div class="panel-header">
+        <h2>📊 Panel Administrativo</h2>
+        <div class="header-actions">
+          <button @click="mostrarEditor = true" class="btn btn-primary">
+            🛠️ Editor
+          </button>
+          <button @click="mostrarUsuarios = true" class="btn btn-primary">
+            👥 Usuarios
+          </button>
+          <button @click="cargarReportes" class="btn btn-secondary" :disabled="loading">
+            🔄 Actualizar
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div class="panel-content">
-      <div v-if="loading" class="loading">Cargando reportes...</div>
+      <div class="panel-content">
+        <div v-if="loading" class="loading">Cargando reportes...</div>
 
-      <template v-else>
+        <template v-else>
         <!-- Estadísticas Diarias -->
         <div class="section">
           <h3>📈 Estadísticas del Día</h3>
@@ -51,7 +68,6 @@
           <button @click="mostrarGeneradorQR = !mostrarGeneradorQR" class="btn btn-secondary">
             📱 {{ mostrarGeneradorQR ? 'Ocultar' : 'Mostrar' }} Generador de QR
           </button>
-          <GeneradorQR v-if="mostrarGeneradorQR" />
           <GeneradorQR v-if="mostrarGeneradorQR" />
         </div>
 
@@ -137,8 +153,12 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '../api';
 import GeneradorQR from './GeneradorQR.vue';
+import AdminUsers from './AdminUsers.vue';
+import EditorPanel from './EditorPanel.vue';
 
 const mostrarGeneradorQR = ref(false);
+const mostrarUsuarios = ref(false);
+const mostrarEditor = ref(false);
 
 
 const loading = ref(false);

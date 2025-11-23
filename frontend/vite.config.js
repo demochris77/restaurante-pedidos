@@ -6,7 +6,14 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
-    host: '0.0.0.0'  // Escuchar en todas las interfaces (importante para red local)
+    host: '0.0.0.0',
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   build: {
     outDir: 'dist',

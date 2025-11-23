@@ -7,11 +7,11 @@ export const useUsuarioStore = defineStore('usuario', () => {
     const error = ref(null);
     const loading = ref(false);
 
-    const login = async (email, rol) => {
+    const login = async (username, password) => {
         loading.value = true;
         error.value = null;
         try {
-            const response = await api.login(email, rol);
+            const response = await api.login(username, password);
             usuario.value = response.data;
             localStorage.setItem('usuario', JSON.stringify(response.data));
             return response.data;

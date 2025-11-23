@@ -8,37 +8,33 @@
 
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
-          <label for="email">Correo Electrónico</label>
+          <label for="username">Usuario</label>
           <input
-            id="email"
-            v-model="email"
-            type="email"
-            placeholder="tu@email.com"
+            id="username"
+            v-model="username"
+            type="text"
+            placeholder="Ej: admin"
             required
             :disabled="loading"
           />
         </div>
 
         <div class="form-group">
-          <label for="rol">Tu Rol</label>
-          <select
-            id="rol"
-            v-model="rol"
+          <label for="password">Contraseña</label>
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            placeholder="••••••••"
             required
             :disabled="loading"
-          >
-            <option value="">-- Selecciona tu rol --</option>
-            <option value="mesero">👨‍💼 Mesero</option>
-            <option value="cocinero">👨‍🍳 Cocinero</option>
-            <option value="facturero">💰 Facturero/Caja</option>
-            <option value="admin">👨‍💻 Administrador</option>
-          </select>
+          />
         </div>
 
         <button
           type="submit"
           class="btn btn-login"
-          :disabled="loading || !email || !rol"
+          :disabled="loading || !username || !password"
         >
           <span v-if="loading">Iniciando sesión...</span>
           <span v-else>Iniciar Sesión</span>
@@ -50,27 +46,8 @@
       </div>
 
       <div class="demo-info">
-        <h3>👤 Usuarios de Demostración</h3>
-        <div class="demo-users">
-          <div class="demo-user">
-            <strong>Mesero:</strong>
-            <code>carlos@restaurant.com</code>
-          </div>
-          <div class="demo-user">
-            <strong>Cocinero:</strong>
-            <code>juan@restaurant.com</code>
-          </div>
-          <div class="demo-user">
-            <strong>Facturero:</strong>
-            <code>rosa@restaurant.com</code>
-          </div>
-          <div class="demo-user">
-            <strong>Admin:</strong>
-            <code>admin@restaurant.com</code>
-          </div>
-        </div>
         <p class="demo-note">
-          💡 Puedes usar cualquier correo, se creará automáticamente
+          💡 Solo personal autorizado.
         </p>
       </div>
     </div>
@@ -83,8 +60,8 @@ import { useUsuarioStore } from '../stores/usuarioStore';
 
 const usuarioStore = useUsuarioStore();
 
-const email = ref('');
-const rol = ref('');
+const username = ref('');
+const password = ref('');
 const loading = ref(false);
 const error = ref('');
 
@@ -93,7 +70,7 @@ const handleLogin = async () => {
   loading.value = true;
 
   try {
-    await usuarioStore.login(email.value, rol.value);
+    await usuarioStore.login(username.value, password.value);
   } catch (err) {
     error.value = usuarioStore.error || 'Error al conectar con el servidor';
   } finally {

@@ -1,56 +1,54 @@
 <template>
   <div id="app" class="app-container">
-    <!-- Si no hay usuario logueado, mostrar login -->
-    <LoginForm v-if="!usuarioStore.usuario" />
+    <!-- Vista Pública del Menú -->
+    <MenuView v-if="isPublicMenu" />
 
-    <!-- Si hay usuario logueado, mostrar según rol -->
+    <!-- Aplicación Principal -->
     <template v-else>
-      <!-- Navbar superior -->
-      <nav class="navbar">
-        <div class="navbar-content">
-          <div class="navbar-left">
-            <h1 class="logo">🍽️ Restaurante POS</h1>
-            <span class="rol-badge" :class="`rol-${usuarioStore.usuario.rol}`">
-              {{ obtenerNombreRol(usuarioStore.usuario.rol) }}
-            </span>
+      <!-- Si no hay usuario logueado, mostrar login -->
+      <LoginForm v-if="!usuarioStore.usuario" />
+
+      <!-- Si hay usuario logueado, mostrar según rol -->
+      <template v-else>
+        <!-- Navbar superior -->
+        <nav class="navbar">
+          <div class="navbar-content">
+            <div class="navbar-left">
+              <h1 class="logo">🍽️ Restaurante POS</h1>
+              <span class="rol-badge" :class="`rol-${usuarioStore.usuario.rol}`">
+                {{ obtenerNombreRol(usuarioStore.usuario.rol) }}
+              </span>
+            </div>
+            <div class="navbar-right">
+              <span class="usuario-nombre">{{ usuarioStore.usuario.nombre }}</span>
+              <button @click="logout" class="btn btn-logout">Cerrar sesión</button>
+            </div>
           </div>
-          <div class="navbar-right">
-            <span class="usuario-nombre">{{ usuarioStore.usuario.nombre }}</span>
-            <button @click="logout" class="btn btn-logout">Cerrar sesión</button>
-          </div>
+        </nav>
+
+        <!-- Contenido según rol -->
+        <div class="main-content">
+          <MeseroPanel v-if="usuarioStore.usuario.rol === 'mesero'" />
+          <CocineroPanel v-if="usuarioStore.usuario.rol === 'cocinero'" />
+          <CajaPanel v-if="usuarioStore.usuario.rol === 'facturero'" />
+          <AdminPanel v-if="usuarioStore.usuario.rol === 'admin'" />
         </div>
-      </nav>
-
-      <!-- Opción para Admin: Ver panel de generador de QR -->
-      <GeneradorQR v-if="usuarioStore.usuario.rol === 'admin' && mostrarGeneradorQR" />
-
-      <!-- O si prefieres que todos lo vean, usa esto -->
-      <GeneradorQR v-if="mostrarGeneradorQR" />
-
-
-      <!-- Contenido según rol -->
-      <div class="main-content">
-        <MeseroPanel v-if="usuarioStore.usuario.rol === 'mesero'" />
-        <CocineroPanel v-if="usuarioStore.usuario.rol === 'cocinero'" />
-        <CajaPanel v-if="usuarioStore.usuario.rol === 'facturero'" />
-        <AdminPanel v-if="usuarioStore.usuario.rol === 'admin'" />
-      </div>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup>
-
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useUsuarioStore } from './stores/usuarioStore';
 import LoginForm from './components/LoginForm.vue';
 import MeseroPanel from './components/MeseroPanel.vue';
 import CocineroPanel from './components/CocineroPanel.vue';
 import CajaPanel from './components/CajaPanel.vue';
 import AdminPanel from './components/AdminPanel.vue';
-import GeneradorQR from './components/GeneradorQR.vue';
+import MenuView from './components/MenuView.vue';
 
-const mostrarGeneradorQR = ref(false);
+const isPublicMenu = ref(false);
 
 // Agrega botón para mostrar/ocultar en el navbar
 
@@ -60,12 +58,14 @@ const usuarioStore = useUsuarioStore();
 // Cargar usuario guardado al montar
 onMounted(() => {
   usuarioStore.cargarUsuarioGuardado();
+  // Detectar si estamos en la ruta pública del menú
+  if (window.location.pathname === '/menu') {
+    isPublicMenu.value = true;
+  }
 });
 
 const logout = () => {
-  if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-    usuarioStore.logout();
-  }
+  usuarioStore.logout();
 };
 
 const obtenerNombreRol = (rol) => {

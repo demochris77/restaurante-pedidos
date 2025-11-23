@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Usar la misma IP/puerto que está cargando el sitio
-const API_URL = `${window.location.origin}/api`;
+// Apuntar siempre al puerto 3000 (Backend)
+const API_URL = `${window.location.protocol}//${window.location.hostname}:3000/api`;
 
 
 const api = axios.create({
@@ -13,12 +13,21 @@ const api = axios.create({
 
 export default {
     // ============= AUTENTICACIÓN =============
-    login(email, rol) {
-        return api.post('/auth/login', { email, rol });
+    login(username, password) {
+        return api.post('/auth/login', { username, password });
     },
 
+    // ============= GESTIÓN DE USUARIOS (ADMIN) =============
     getUsuarios() {
-        return api.get('/auth/usuarios');
+        return api.get('/users');
+    },
+
+    crearUsuario(usuario) {
+        return api.post('/users', usuario);
+    },
+
+    eliminarUsuario(id) {
+        return api.delete(`/users/${id}`);
     },
 
     // ============= MENÚ =============
@@ -26,8 +35,16 @@ export default {
         return api.get('/menu');
     },
 
-    agregarMenuItem(nombre, descripcion, categoria, precio, tiempo) {
-        return api.post('/menu', { nombre, descripcion, categoria, precio, tiempo_preparacion_min: tiempo });
+    agregarMenuItem(nombre, descripcion, categoria, precio, tiempo, stock) {
+        return api.post('/menu', { nombre, descripcion, categoria, precio, tiempo_preparacion_min: tiempo, stock });
+    },
+
+    updateMenuItem(id, item) {
+        return api.put(`/menu/${id}`, item);
+    },
+
+    deleteMenuItem(id) {
+        return api.delete(`/menu/${id}`);
     },
 
     // ============= MESAS =============
@@ -37,6 +54,10 @@ export default {
 
     crearMesa(numero, capacidad) {
         return api.post('/mesas', { numero, capacidad });
+    },
+
+    deleteMesa(id) {
+        return api.delete(`/mesas/${id}`);
     },
 
     // ============= PEDIDOS =============
@@ -82,9 +103,12 @@ export default {
     imprimirCuenta(pedido_id) {
         return api.post('/imprimir/cuenta', { pedido_id });
     },
-
     imprimirPago(pedido_id, metodo_pago, monto) {
         return api.post('/imprimir/pago', { pedido_id, metodo_pago, monto });
     },
 
+    // Configuración
+    getConfig: () => axios.get(`${API_URL}/config`),
+    saveConfig: (config) => axios.post(`${API_URL}/config`, config),
+    getIp: () => axios.get(`${API_URL}/ip`),
 };

@@ -16,12 +16,34 @@ const frontendPath = path.join(__dirname, '../frontend/dist');
 
 dotenv.config();
 
+import os from 'os';
+
+// ... imports ...
+
 const app = express();
 const httpServer = http.createServer(app);
 // Middlewares
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Endpoint para obtener IP local
+app.get('/api/ip', (req, res) => {
+    const interfaces = os.networkInterfaces();
+    let ipAddress = 'localhost';
+
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Skip internal and non-ipv4 addresses
+            if ('IPv4' !== iface.family || iface.internal) {
+                continue;
+            }
+            ipAddress = iface.address;
+            break;
+        }
+    }
+    res.json({ ip: ipAddress });
+});
 
 // ============= BASE DE DATOS =============
 const db = new sqlite3.Database('./restaurante.db', (err) => {
@@ -38,19 +60,37 @@ db.run('PRAGMA foreign_keys = ON');
 // ============= INICIALIZAR TABLAS =============
 const initializeTables = () => {
     db.serialize(() => {
-        // Tabla: Usuarios
+        // Tabla: Usuarios (Recrear para nuevo esquema de Auth)
+        db.run("DROP TABLE IF EXISTS usuarios");
+
         db.run(`
       CREATE TABLE IF NOT EXISTS usuarios (
         id TEXT PRIMARY KEY,
-        nombre TEXT NOT NULL,
-        email TEXT UNIQUE,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        nombre TEXT,
         rol TEXT NOT NULL,
-        password_hash TEXT,
-        activo BOOLEAN DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+    `), (err) => {
+                if (err) {
+                    console.error('Error creando tabla usuarios:', err);
+                } else {
+                    // Semilla: Crear Admin por defecto si no existe
+                    db.get("SELECT count(*) as count FROM usuarios", [], (err, row) => {
+                        if (!err && row && row.count === 0) {
+                            const adminId = uuidv4();
+                            db.run(
+                                'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES (?, ?, ?, ?, ?)',
+                                [adminId, 'admin', 'admin123', 'Administrador Principal', 'admin'],
+                                (err) => {
+                                    if (!err) console.log('✓ Usuario admin creado: admin / admin123');
+                                }
+                            );
+                        }
+                    });
+                }
+            };
 
         // Tabla: Mesas
         db.run(`
@@ -114,19 +154,27 @@ const initializeTables = () => {
 
         // Tabla: Transacciones (Pagos)
         db.run(`
-      CREATE TABLE IF NOT EXISTS transacciones (
-        id TEXT PRIMARY KEY,
-        pedido_id TEXT NOT NULL,
-        usuario_facturero_id TEXT,
-        monto DECIMAL(10,2) NOT NULL,
-        metodo_pago TEXT NOT NULL,
-        referencia_transaccion TEXT,
-        completada BOOLEAN DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(pedido_id) REFERENCES pedidos(id),
-        FOREIGN KEY(usuario_facturero_id) REFERENCES usuarios(id)
-      )
-    `);
+      CREATE TABLE IF NOT EXISTS transacciones(
+            id TEXT PRIMARY KEY,
+            pedido_id TEXT NOT NULL,
+            usuario_facturero_id TEXT,
+            monto DECIMAL(10, 2) NOT NULL,
+            metodo_pago TEXT NOT NULL,
+            referencia_transaccion TEXT,
+            completada BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(pedido_id) REFERENCES pedidos(id),
+            FOREIGN KEY(usuario_facturero_id) REFERENCES usuarios(id)
+        )
+            `);
+
+        // Tabla: Configuración
+        db.run(`
+            CREATE TABLE IF NOT EXISTS configuracion (
+                clave TEXT PRIMARY KEY,
+                valor TEXT
+            )
+        `);
 
         console.log('✓ Tablas inicializadas');
     });
@@ -157,70 +205,89 @@ const getAsync = (query, params = []) => {
     });
 };
 
-// Helper: Obtener múltiples registros
+// Helper: Obtener todos los registros
 const allAsync = (query, params = []) => {
     return new Promise((resolve, reject) => {
         db.all(query, params, (err, rows) => {
             if (err) reject(err);
-            else resolve(rows || []);
+            else resolve(rows);
         });
     });
 };
 
+
+
+
 // ============= RUTAS: AUTENTICACIÓN =============
 
-// POST /api/auth/login - Login del usuario
+// POST /api/auth/login
 app.post('/api/auth/login', async (req, res) => {
     try {
-        const { email, rol } = req.body;
+        const { username, password } = req.body;
 
-        if (!email || !rol) {
-            return res.status(400).json({ error: 'Email y rol requeridos' });
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
         }
 
-        const validRoles = ['admin', 'mesero', 'cocinero', 'facturero'];
-        if (!validRoles.includes(rol)) {
-            return res.status(400).json({ error: 'Rol inválido' });
-        }
+        const user = await getAsync('SELECT * FROM usuarios WHERE username = ? AND password = ?', [username, password]);
 
-        // Verificar si el usuario ya existe
-        const usuarioExistente = await getAsync('SELECT * FROM usuarios WHERE email = ?', [email]);
-
-        let id;
-        let nombre = email.split('@')[0];
-
-        if (usuarioExistente) {
-            // Usuario existe: Usar su ID
-            id = usuarioExistente.id;
-            await runAsync('UPDATE usuarios SET rol = ?, nombre = ? WHERE id = ?', [rol, nombre, id]);
+        if (user) {
+            res.json({
+                id: user.id,
+                nombre: user.nombre,
+                rol: user.rol,
+                username: user.username
+            });
         } else {
-            // Usuario nuevo: Generar ID
-            id = uuidv4();
-            await runAsync(
-                'INSERT INTO usuarios (id, nombre, email, rol, activo) VALUES (?, ?, ?, ?, 1)',
-                [id, nombre, email, rol]
-            );
+            res.status(401).json({ error: 'Credenciales inválidas' });
         }
-
-        res.json({
-            id,
-            nombre,
-            email,
-            rol,
-            token: 'demo-token'
-        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
+// ============= RUTAS: GESTIÓN DE USUARIOS (ADMIN) =============
 
-
-// GET /api/auth/usuarios - Obtener todos los usuarios
-app.get('/api/auth/usuarios', async (req, res) => {
+// GET /api/users - Listar usuarios
+app.get('/api/users', async (req, res) => {
     try {
-        const usuarios = await allAsync('SELECT id, nombre, email, rol, activo FROM usuarios');
-        res.json(usuarios);
+        const users = await allAsync('SELECT id, username, nombre, rol FROM usuarios');
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/users - Crear usuario
+app.post('/api/users', async (req, res) => {
+    try {
+        const { username, password, nombre, rol } = req.body;
+        if (!username || !password || !rol) {
+            return res.status(400).json({ error: 'Faltan datos requeridos' });
+        }
+
+        // Verificar si ya existe
+        const existing = await getAsync('SELECT id FROM usuarios WHERE username = ?', [username]);
+        if (existing) {
+            return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+        }
+
+        const id = uuidv4();
+        await runAsync(
+            'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES (?, ?, ?, ?, ?)',
+            [id, username, password, nombre, rol]
+        );
+        res.json({ id, username, nombre, rol, message: 'Usuario creado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/users/:id - Eliminar usuario
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        await runAsync('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Usuario eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -251,7 +318,7 @@ app.post('/api/menu', async (req, res) => {
         const query = `
       INSERT INTO menu_items (id, nombre, descripcion, categoria, precio, tiempo_preparacion_min)
       VALUES (?, ?, ?, ?, ?, ?)
-    `;
+                `;
 
         await runAsync(query, [id, nombre, descripcion || null, categoria, precio, tiempo_preparacion_min || 15]);
 
@@ -265,6 +332,33 @@ app.post('/api/menu', async (req, res) => {
             disponible: true,
             message: '✓ Item agregado'
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT /api/menu/:id - Actualizar item del menú
+app.put('/api/menu/:id', async (req, res) => {
+    try {
+        const { nombre, descripcion, categoria, precio, tiempo_preparacion_min, disponible } = req.body;
+
+        await runAsync(`
+            UPDATE menu_items 
+            SET nombre = ?, descripcion = ?, categoria = ?, precio = ?, tiempo_preparacion_min = ?, disponible = ?
+            WHERE id = ?
+                `, [nombre, descripcion, categoria, precio, tiempo_preparacion_min, disponible, req.params.id]);
+
+        res.json({ message: '✓ Item actualizado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/menu/:id - Eliminar item del menú
+app.delete('/api/menu/:id', async (req, res) => {
+    try {
+        await runAsync('DELETE FROM menu_items WHERE id = ?', [req.params.id]);
+        res.json({ message: '✓ Item eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -291,7 +385,7 @@ app.post('/api/mesas', async (req, res) => {
             return res.status(400).json({ error: 'Número de mesa requerido' });
         }
 
-        const query = `INSERT INTO mesas (numero, capacidad) VALUES (?, ?)`;
+        const query = `INSERT INTO mesas(numero, capacidad) VALUES(?, ?)`;
         await runAsync(query, [numero, capacidad || 4]);
 
         res.json({
@@ -300,6 +394,16 @@ app.post('/api/mesas', async (req, res) => {
             estado: 'disponible',
             message: '✓ Mesa agregada'
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/mesas/:id - Eliminar mesa
+app.delete('/api/mesas/:id', async (req, res) => {
+    try {
+        await runAsync('DELETE FROM mesas WHERE id = ?', [req.params.id]);
+        res.json({ message: '✓ Mesa eliminada' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -326,18 +430,18 @@ app.post('/api/pedidos', async (req, res) => {
 
         // Insertar pedido
         const pedidoQuery = `
-      INSERT INTO pedidos (id, mesa_numero, usuario_mesero_id, total, notas, estado)
-      VALUES (?, ?, ?, ?, ?, 'nuevo')
-    `;
+      INSERT INTO pedidos(id, mesa_numero, usuario_mesero_id, total, notas, estado)
+      VALUES(?, ?, ?, ?, ?, 'nuevo')
+                `;
         await runAsync(pedidoQuery, [pedido_id, mesa_numero, usuario_mesero_id, total, notas || null]);
 
         // Insertar items del pedido
         for (const item of items) {
             const item_id = uuidv4();
             const itemQuery = `
-        INSERT INTO pedido_items (id, pedido_id, menu_item_id, cantidad, precio_unitario, notas)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `;
+        INSERT INTO pedido_items(id, pedido_id, menu_item_id, cantidad, precio_unitario, notas)
+        VALUES(?, ?, ?, ?, ?, ?)
+                `;
             await runAsync(itemQuery, [
                 item_id,
                 pedido_id,
@@ -367,22 +471,22 @@ app.get('/api/pedidos/activos', async (req, res) => {
     try {
         const query = `
       SELECT 
-        p.id, 
-        p.mesa_numero, 
-        p.usuario_mesero_id, 
-        p.estado, 
-        p.total, 
-        p.notas,
-        p.created_at,
-        p.started_at,
-        p.completed_at,
-        COUNT(pi.id) as items_count
+        p.id,
+            p.mesa_numero,
+            p.usuario_mesero_id,
+            p.estado,
+            p.total,
+            p.notas,
+            p.created_at,
+            p.started_at,
+            p.completed_at,
+            COUNT(pi.id) as items_count
       FROM pedidos p
       LEFT JOIN pedido_items pi ON p.id = pi.pedido_id
-      WHERE p.estado IN ('nuevo', 'en_cocina', 'listo', 'servido', 'listo_pagar', 'en_caja')
+      WHERE p.estado IN('nuevo', 'en_cocina', 'listo', 'servido', 'listo_pagar', 'en_caja')
       GROUP BY p.id
       ORDER BY p.created_at ASC
-    `;
+            `;
 
         const pedidos = await allAsync(query);
 
@@ -393,7 +497,7 @@ app.get('/api/pedidos/activos', async (req, res) => {
         FROM pedido_items pi
         JOIN menu_items mi ON pi.menu_item_id = mi.id
         WHERE pi.pedido_id = ?
-      `;
+            `;
             pedido.items = await allAsync(itemsQuery, [pedido.id]);
         }
 
@@ -417,7 +521,7 @@ app.get('/api/pedidos/:id', async (req, res) => {
       FROM pedido_items pi
       JOIN menu_items mi ON pi.menu_item_id = mi.id
       WHERE pi.pedido_id = ?
-    `, [req.params.id]);
+            `, [req.params.id]);
 
         res.json({ ...pedido, items });
     } catch (error) {
@@ -497,9 +601,9 @@ app.post('/api/transacciones', async (req, res) => {
 
         const transaccion_id = uuidv4();
         const query = `
-      INSERT INTO transacciones (id, pedido_id, usuario_facturero_id, monto, metodo_pago, completada)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `;
+      INSERT INTO transacciones(id, pedido_id, usuario_facturero_id, monto, metodo_pago, completada)
+      VALUES(?, ?, ?, ?, ?, 1)
+                `;
 
         await runAsync(query, [transaccion_id, pedido_id, usuario_facturero_id, monto, metodo_pago]);
 
@@ -535,7 +639,7 @@ app.post('/api/imprimir/cuenta', async (req, res) => {
       FROM pedido_items pi
       JOIN menu_items mi ON pi.menu_item_id = mi.id
       WHERE pi.pedido_id = ?
-    `, [pedido_id]);
+            `, [pedido_id]);
 
         pedido.items = items;
         const impreso = await imprimirCuenta(pedido);
@@ -581,12 +685,12 @@ app.get('/api/reportes/ventas-hoy', async (req, res) => {
         const query = `
       SELECT 
         metodo_pago,
-        COUNT(*) as cantidad,
-        SUM(monto) as total
+            COUNT(*) as cantidad,
+            SUM(monto) as total
       FROM transacciones
       WHERE DATE(created_at) = DATE('now')
       GROUP BY metodo_pago
-    `;
+            `;
 
         const reportes = await allAsync(query);
 
@@ -594,7 +698,7 @@ app.get('/api/reportes/ventas-hoy', async (req, res) => {
       SELECT SUM(monto) as total
       FROM transacciones
       WHERE DATE(created_at) = DATE('now')
-    `;
+            `;
 
         const totalRow = await getAsync(totalQuery);
 
@@ -614,19 +718,22 @@ app.get('/api/reportes/pedidos-hoy', async (req, res) => {
         const query = `
       SELECT 
         p.id,
-        p.mesa_numero,
-        u.nombre as mesero,
-        p.total,
-        p.estado,
-        p.created_at,
-        COUNT(pi.id) as items_count
+            p.mesa_numero,
+            u.nombre as mesero,
+            p.total,
+            p.estado,
+            p.created_at,
+            COUNT(pi.id) as items_count,
+            t.usuario_facturero_id,
+            t.metodo_pago
       FROM pedidos p
       LEFT JOIN usuarios u ON p.usuario_mesero_id = u.id
       LEFT JOIN pedido_items pi ON p.id = pi.pedido_id
+      LEFT JOIN transacciones t ON p.id = t.pedido_id
       WHERE DATE(p.created_at) = DATE('now')
       GROUP BY p.id
       ORDER BY p.created_at DESC
-    `;
+            `;
 
         const pedidos = await allAsync(query);
         res.json(pedidos);
@@ -642,14 +749,14 @@ app.get('/api/reportes/historico', async (req, res) => {
         const ventasPorDiaQuery = `
             SELECT 
                 DATE(t.created_at) as fecha,
-                COUNT(*) as cantidad_transacciones,
-                SUM(t.monto) as total_dia
+            COUNT(*) as cantidad_transacciones,
+            SUM(t.monto) as total_dia
             FROM transacciones t
             WHERE t.completada = 1
             GROUP BY DATE(t.created_at)
             ORDER BY fecha DESC
             LIMIT 30
-        `;
+            `;
 
         const ventasPorDia = await allAsync(ventasPorDiaQuery);
 
@@ -657,10 +764,10 @@ app.get('/api/reportes/historico', async (req, res) => {
         const totalAcumuladoQuery = `
             SELECT 
                 COUNT(*) as total_transacciones,
-                SUM(monto) as total_acumulado
+            SUM(monto) as total_acumulado
             FROM transacciones
             WHERE completada = 1
-        `;
+            `;
 
         const totalAcumulado = await getAsync(totalAcumuladoQuery);
 
@@ -668,6 +775,50 @@ app.get('/api/reportes/historico', async (req, res) => {
             ventas_por_dia: ventasPorDia,
             total_acumulado: totalAcumulado
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============= RUTAS: CONFIGURACIÓN =============
+
+// GET /api/config
+app.get('/api/config', async (req, res) => {
+    try {
+        const rows = await allAsync('SELECT * FROM configuracion');
+        const config = {};
+        rows.forEach(row => {
+            if (row.valor === 'true') config[row.clave] = true;
+            else if (row.valor === 'false') config[row.clave] = false;
+            else config[row.clave] = row.valor;
+        });
+        res.json(config);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/config
+app.post('/api/config', async (req, res) => {
+    try {
+        const config = req.body;
+        const stmt = db.prepare("INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?, ?)");
+
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+            Object.entries(config).forEach(([key, val]) => {
+                stmt.run(key, String(val));
+            });
+            db.run("COMMIT", (err) => {
+                if (err) {
+                    console.error('Error guardando config:', err);
+                    res.status(500).json({ error: err.message });
+                } else {
+                    res.json({ success: true });
+                }
+            });
+        });
+        stmt.finalize();
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -690,6 +841,7 @@ app.get('/api/test', (req, res) => {
         ]
     });
 });
+
 
 // ============= SERVIR FRONTEND =============
 console.log('📁 Sirviendo frontend desde:', frontendPath);
@@ -721,6 +873,8 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: err.message });
 });
 
+
+
 // ============= INICIAR SERVIDOR =============
 
 const PORT = process.env.PORT || 3000;
@@ -729,7 +883,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(60));
     console.log('✓ SERVIDOR CORRIENDO');
     console.log('='.repeat(60));
-    console.log(`\n📍 Acceso local:  http://localhost:${PORT}`);
+    console.log(`\n📍 Acceso local: http://localhost:${PORT}`);
     console.log(`📍 Acceso red:    http://${process.env.HOST}:${PORT}`);
     console.log(`\n🧪 Prueba:       http://localhost:${PORT}/api/test`);
     console.log(`📊 Menú:         http://localhost:${PORT}/api/menu`);
@@ -744,5 +898,6 @@ process.on('SIGINT', () => {
         process.exit(0);
     });
 });
+
 
 
