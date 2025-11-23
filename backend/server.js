@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import sqlite3 from 'sqlite3';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import http from 'http';
@@ -8,6 +7,10 @@ import { imprimirCuenta, imprimirReciboPago } from './printer-simple.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
+import pkg from 'pg';
+const { Pool } = pkg;
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,7 +18,9 @@ const frontendPath = path.join(__dirname, '../frontend/dist');
 
 
 dotenv.config();
-
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
 import os from 'os';
 
 // ... imports ...
@@ -46,181 +51,135 @@ app.get('/api/ip', (req, res) => {
 });
 
 // ============= BASE DE DATOS =============
-const db = new sqlite3.Database('./restaurante.db', (err) => {
-    if (err) {
-        console.error('❌ Error conectando a BD:', err.message);
-        process.exit(1);
-    }
-    console.log('✓ Conectado a SQLite');
-});
 
-// Habilitar foreign keys
-db.run('PRAGMA foreign_keys = ON');
+const initializeTablesPostgres = async () => {
+  // Usuarios
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      nombre TEXT,
+      rol TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-// ============= INICIALIZAR TABLAS =============
-const initializeTables = () => {
-    db.serialize(() => {
-        // Tabla: Usuarios (Recrear para nuevo esquema de Auth)
-        db.run("DROP TABLE IF EXISTS usuarios", (dropErr) => {
-  if(dropErr) {
-    console.error('Error borrando tabla usuarios:', dropErr);
-  } else {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id TEXT PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        nombre TEXT,
-        rol TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `, (createErr) => {
-      if (createErr) {
-        console.error('Error creando tabla usuarios:', createErr);
-      } else {
-        // Semilla admin si la tabla está vacía
-        db.get("SELECT count(*) as count FROM usuarios", [], (err, row) => {
-          if (!err && row && row.count === 0) {
-            const adminId = uuidv4();
-            db.run(
-              'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES (?, ?, ?, ?, ?)',
-              [adminId, 'admin', 'admin123', 'Administrador Principal', 'admin'],
-              (insertErr) => {
-                if (insertErr) {
-                  console.error('Error insertando admin:', insertErr);
-                } else {
-                  console.log('✓ Usuario admin creado: admin / admin123');
-                }
-              }
-            );
-          }
-        });
-      }
-    });
+  // Mesas
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS mesas (
+      id SERIAL PRIMARY KEY,
+      numero INTEGER UNIQUE NOT NULL,
+      capacidad INTEGER DEFAULT 4,
+      estado TEXT DEFAULT 'disponible',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Items de Menú
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS menu_items (
+      id TEXT PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      descripcion TEXT,
+      categoria TEXT,
+      precio NUMERIC(10,2) NOT NULL,
+      disponible BOOLEAN DEFAULT TRUE,
+      imagen_url TEXT,
+      tiempo_preparacion_min INTEGER DEFAULT 15,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Pedidos
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS pedidos (
+      id TEXT PRIMARY KEY,
+      mesa_numero INTEGER NOT NULL,
+      usuario_mesero_id TEXT,
+      estado TEXT DEFAULT 'nuevo',
+      total NUMERIC(10,2),
+      notas TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      started_at TIMESTAMP,
+      completed_at TIMESTAMP,
+      delivered_at TIMESTAMP,
+      FOREIGN KEY(usuario_mesero_id) REFERENCES usuarios(id)
+    )
+  `);
+
+  // Pedido items
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS pedido_items (
+      id TEXT PRIMARY KEY,
+      pedido_id TEXT NOT NULL,
+      menu_item_id TEXT NOT NULL,
+      cantidad INTEGER NOT NULL,
+      precio_unitario NUMERIC(10,2),
+      estado TEXT DEFAULT 'pendiente',
+      notas TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(pedido_id) REFERENCES pedidos(id),
+      FOREIGN KEY(menu_item_id) REFERENCES menu_items(id)
+    )
+  `);
+
+  // Transacciones
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS transacciones (
+      id TEXT PRIMARY KEY,
+      pedido_id TEXT NOT NULL,
+      usuario_facturero_id TEXT,
+      monto NUMERIC(10, 2) NOT NULL,
+      metodo_pago TEXT NOT NULL,
+      referencia_transaccion TEXT,
+      completada BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(pedido_id) REFERENCES pedidos(id),
+      FOREIGN KEY(usuario_facturero_id) REFERENCES usuarios(id)
+    )
+  `);
+
+  // Configuración
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS configuracion (
+      clave TEXT PRIMARY KEY,
+      valor TEXT
+    )
+  `);
+
+  // Seed admin user si no existe
+  const row = await getAsync('SELECT count(*) as count FROM usuarios');
+  if (row && Number(row.count) === 0) {
+    await runAsync(
+      'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES ($1, $2, $3, $4, $5)',
+      [uuidv4(), 'admin', 'admin123', 'Administrador Principal', 'admin']
+    );
+    console.log('✓ Usuario admin creado: admin/admin123');
   }
-});
 
-        // Tabla: Mesas
-        db.run(`
-      CREATE TABLE IF NOT EXISTS mesas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        numero INTEGER UNIQUE NOT NULL,
-        capacidad INTEGER DEFAULT 4,
-        estado TEXT DEFAULT 'disponible',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-        // Tabla: Items de Menú
-        db.run(`
-      CREATE TABLE IF NOT EXISTS menu_items (
-        id TEXT PRIMARY KEY,
-        nombre TEXT NOT NULL,
-        descripcion TEXT,
-        categoria TEXT,
-        precio DECIMAL(10,2) NOT NULL,
-        disponible BOOLEAN DEFAULT 1,
-        imagen_url TEXT,
-        tiempo_preparacion_min INTEGER DEFAULT 15,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-        // Tabla: Pedidos
-        db.run(`
-      CREATE TABLE IF NOT EXISTS pedidos (
-        id TEXT PRIMARY KEY,
-        mesa_numero INTEGER NOT NULL,
-        usuario_mesero_id TEXT,
-        estado TEXT DEFAULT 'nuevo',
-        total DECIMAL(10,2),
-        notas TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        started_at DATETIME,
-        completed_at DATETIME,
-        delivered_at DATETIME,
-        FOREIGN KEY(usuario_mesero_id) REFERENCES usuarios(id)
-      )
-    `);
-
-        // Tabla: Items del Pedido
-        db.run(`
-      CREATE TABLE IF NOT EXISTS pedido_items (
-        id TEXT PRIMARY KEY,
-        pedido_id TEXT NOT NULL,
-        menu_item_id TEXT NOT NULL,
-        cantidad INTEGER NOT NULL,
-        precio_unitario DECIMAL(10,2),
-        estado TEXT DEFAULT 'pendiente',
-        notas TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(pedido_id) REFERENCES pedidos(id),
-        FOREIGN KEY(menu_item_id) REFERENCES menu_items(id)
-      )
-    `);
-
-        // Tabla: Transacciones (Pagos)
-        db.run(`
-      CREATE TABLE IF NOT EXISTS transacciones(
-            id TEXT PRIMARY KEY,
-            pedido_id TEXT NOT NULL,
-            usuario_facturero_id TEXT,
-            monto DECIMAL(10, 2) NOT NULL,
-            metodo_pago TEXT NOT NULL,
-            referencia_transaccion TEXT,
-            completada BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(pedido_id) REFERENCES pedidos(id),
-            FOREIGN KEY(usuario_facturero_id) REFERENCES usuarios(id)
-        )
-            `);
-
-        // Tabla: Configuración
-        db.run(`
-            CREATE TABLE IF NOT EXISTS configuracion (
-                clave TEXT PRIMARY KEY,
-                valor TEXT
-            )
-        `);
-
-        console.log('✓ Tablas inicializadas');
-    });
+  console.log('✓ Tablas inicializadas en Postgres');
 };
 
-// Inicializar al arrancar
-initializeTables();
+// Inicializa al arrancar
+initializeTablesPostgres();
 
 // ============= FUNCIONES AUXILIARES =============
 
 // Helper: Ejecutar query y devolver promesa
-const runAsync = (query, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.run(query, params, function (err) {
-            if (err) reject(err);
-            else resolve(this);
-        });
-    });
+const runAsync = async (query, params = []) => {
+  await pool.query(query, params);
 };
 
-// Helper: Obtener un registro
-const getAsync = (query, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.get(query, params, (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
+const getAsync = async (query, params = []) => {
+  const res = await pool.query(query, params);
+  return res.rows[0];
 };
 
-// Helper: Obtener todos los registros
-const allAsync = (query, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.all(query, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
+const allAsync = async (query, params = []) => {
+  const res = await pool.query(query, params);
+  return res.rows;
 };
 
 
