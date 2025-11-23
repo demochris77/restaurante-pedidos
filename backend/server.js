@@ -61,9 +61,11 @@ db.run('PRAGMA foreign_keys = ON');
 const initializeTables = () => {
     db.serialize(() => {
         // Tabla: Usuarios (Recrear para nuevo esquema de Auth)
-        db.run("DROP TABLE IF EXISTS usuarios");
-
-        db.run(`
+        db.run("DROP TABLE IF EXISTS usuarios", (dropErr) => {
+  if(dropErr) {
+    console.error('Error borrando tabla usuarios:', dropErr);
+  } else {
+    db.run(`
       CREATE TABLE IF NOT EXISTS usuarios (
         id TEXT PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
@@ -72,25 +74,31 @@ const initializeTables = () => {
         rol TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `), (err) => {
-                if (err) {
-                    console.error('Error creando tabla usuarios:', err);
+    `, (createErr) => {
+      if (createErr) {
+        console.error('Error creando tabla usuarios:', createErr);
+      } else {
+        // Semilla admin si la tabla está vacía
+        db.get("SELECT count(*) as count FROM usuarios", [], (err, row) => {
+          if (!err && row && row.count === 0) {
+            const adminId = uuidv4();
+            db.run(
+              'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES (?, ?, ?, ?, ?)',
+              [adminId, 'admin', 'admin123', 'Administrador Principal', 'admin'],
+              (insertErr) => {
+                if (insertErr) {
+                  console.error('Error insertando admin:', insertErr);
                 } else {
-                    // Semilla: Crear Admin por defecto si no existe
-                    db.get("SELECT count(*) as count FROM usuarios", [], (err, row) => {
-                        if (!err && row && row.count === 0) {
-                            const adminId = uuidv4();
-                            db.run(
-                                'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES (?, ?, ?, ?, ?)',
-                                [adminId, 'admin', 'admin123', 'Administrador Principal', 'admin'],
-                                (err) => {
-                                    if (!err) console.log('✓ Usuario admin creado: admin / admin123');
-                                }
-                            );
-                        }
-                    });
+                  console.log('✓ Usuario admin creado: admin / admin123');
                 }
-            };
+              }
+            );
+          }
+        });
+      }
+    });
+  }
+});
 
         // Tabla: Mesas
         db.run(`
