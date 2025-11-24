@@ -79,7 +79,7 @@ const obtenerNombreRol = (rol) => {
 };
 </script>
 
-<style scoped>
+<style >
 .app-container {
   display: flex;
   flex-direction: column;
