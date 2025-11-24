@@ -20,7 +20,9 @@
                 <button @click="cerrarNotificacion(notif.id)" class="btn-cerrar-notif">✕</button>
             </div>
             </div>
+<GeneradorQR :valor="urlParaQR" ref="qrComponent" />
 
+<button @click="descargarQRDesdeComponente" :disabled="!qrComponent.qrSrc">Descargar QR</button>
         <!-- Selector de Mesa -->
         <div class="section">
           <h3>1️⃣ Selecciona la Mesa</h3>
@@ -185,7 +187,20 @@ const categoriaSeleccionada = ref('');
 const pedidoEnProgreso = ref([]);
 const notasPedido = ref('');
 const loading = ref(false);
+const qrComponent = ref(null);
 
+const urlParaQR = ref('https://restaurante-pedidos.vercel.app/mesero');
+
+const descargarQRDesdeComponente = () => {
+  if (qrComponent.value && qrComponent.value.qrSrc) {
+    const link = document.createElement('a');
+    link.href = qrComponent.value.qrSrc;
+    link.download = 'qr-mesero.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 const categorias = computed(() => {
   const cats = new Set(pedidoStore.menu.map(item => item.categoria));
   return Array.from(cats).sort();
