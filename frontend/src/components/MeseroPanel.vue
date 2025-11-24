@@ -173,7 +173,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { usePedidoStore } from '../stores/pedidoStore';
 import { useUsuarioStore } from '../stores/usuarioStore';
 import { useNotificaciones } from '../composables/useNotificaciones';
-import GeneradorQR from './components/GeneradorQR.vue';
+import GeneradorQR from './GeneradorQR.vue';
 const { notificaciones, cerrarNotificacion } = useNotificaciones('mesero');
 
 const pedidoStore = usePedidoStore();
