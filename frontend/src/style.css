@@ -115,7 +115,10 @@ label {
   margin: 0 auto;
   padding: 20px;
 }
-
+body, #app, .main-content, .cocinero-panel, .card, .panel-content, .section, .pedido-card, .items-list, .item-line, input, button, label, span {
+  user-select: auto !important;
+  pointer-events: auto !important;
+}
 .row {
   display: flex;
   gap: 20px;
