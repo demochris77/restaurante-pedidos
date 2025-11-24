@@ -63,7 +63,7 @@
   class="item-line"
   :class="{ 'item-done': item.estado === 'listo' }"
 >
-  <label class="item-touch-label" style="width:100%; display:flex; align-items:center; cursor:pointer;">
+  <label class="item-touch-label">
     <input
       type="checkbox"
       :checked="item.estado === 'listo'"
@@ -75,9 +75,6 @@
     <span class="name">{{ item.nombre }}</span>
   </label>
 </div>
-                  <span class="qty">{{ item.cantidad }}x</span>
-                  <span class="name">{{ item.nombre }}</span>
-                </div>
               </div>
               <div class="progreso-bar">
                 <div class="progreso-fill" :style="{ width: porcentajePedido(pedido) + '%' }"></div>
