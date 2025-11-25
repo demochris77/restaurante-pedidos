@@ -3,6 +3,9 @@
     <div class="panel-header">
       <h2>📝 Tomar Pedido</h2>
       <div class="header-buttons">
+        <button @click="mostrarQRMenu" class="btn btn-info" style="margin-right: 8px;">
+          📱 QR Menú
+        </button>
         <button @click="cargarDatos" class="btn btn-secondary" :disabled="loading">
           🔄 Actualizar
         </button>
@@ -160,11 +163,18 @@
                 <span>{{ pedido.items_count }} items</span>
                 <span>${{ pedido.total }}</span>
               </div>
+              <button @click="mostrarQRCliente(pedido.id)" class="btn btn-secondary btn-small" style="margin-top:8px; width:100%;">
+                📱 Ver QR Cliente
+              </button>
             </div>
           </div>
-        </div><div>
-    <GeneradorQR v-if="mostrarQR" ref="qrComponent" :valor="urlParaQR" />
-    
+        </div>
+  <div v-if="mostrarQR" class="qr-modal-overlay" @click.self="cerrarQR">
+    <div class="qr-modal">
+        <h3>📱 Escanea para ver el estado</h3>
+        <GeneradorQR ref="qrComponent" :valor="urlParaQR" />
+        <button @click="cerrarQR" class="btn btn-secondary" style="margin-top:16px;">Cerrar</button>
+    </div>
   </div>
       </template>
     </div>
@@ -188,13 +198,30 @@ const pedidoEnProgreso = ref([]);
 const notasPedido = ref('');
 const loading = ref(false);
 const qrComponent = ref(null);
-const mostrarQR = ref(true);
-const urlParaQR = ref('https://restaurante-pedidos.vercel.app/menu');
+const mostrarQR = ref(false);
+const urlParaQR = ref('');
+
+const mostrarQRCliente = (pedidoId) => {
+  const baseUrl = window.location.origin;
+  urlParaQR.value = `${baseUrl}/pedido/${pedidoId}/status`;
+  mostrarQR.value = true;
+};
+
+const mostrarQRMenu = () => {
+  const baseUrl = window.location.origin;
+  urlParaQR.value = `${baseUrl}/menu`;
+  mostrarQR.value = true;
+};
+
+const cerrarQR = () => {
+    mostrarQR.value = false;
+};
+
 const descargarQR = () => {
   if (qrComponent.value && qrComponent.value.qrSrc) {
     const link = document.createElement('a');
     link.href = qrComponent.value.qrSrc;
-    link.download = 'qr-mesero.png';
+    link.download = 'qr-pedido.png';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -267,7 +294,12 @@ const agregarItemAlPedido = (item) => {
 };
 
 const removerItem = (idx) => {
-  pedidoEnProgreso.value.splice(idx, 1);
+  const item = pedidoEnProgreso.value[idx];
+  if (item.cantidad > 1) {
+    item.cantidad--;
+  } else {
+    pedidoEnProgreso.value.splice(idx, 1);
+  }
 };
 
 const calcularTotal = () => {
@@ -377,6 +409,12 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   max-width: 1200px;
+}
+
+.btn-info {
+  background: #3b82f6;
+  color: white;
+  border: none;
 }
 
 .panel-header {
@@ -904,4 +942,25 @@ onMounted(() => {
   }
 }
 
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.qr-modal {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
 </style>

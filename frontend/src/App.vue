@@ -15,6 +15,7 @@
           <div class="navbar-content">
             <div class="navbar-left">
               <h1 class="logo">🍽️ Restaurante POS</h1>
+              <div class="connection-status" :class="{ 'connected': isConnected }" title="Estado de conexión"></div>
               <span class="rol-badge" :class="`rol-${usuarioStore.usuario.rol}`">
                 {{ obtenerNombreRol(usuarioStore.usuario.rol) }}
               </span>
@@ -40,6 +41,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { usePedidoStore } from './stores/pedidoStore';
 import { useUsuarioStore } from './stores/usuarioStore';
 import LoginForm from './components/LoginForm.vue';
 import MeseroPanel from './components/MeseroPanel.vue';
@@ -47,17 +49,31 @@ import CocineroPanel from './components/CocineroPanel.vue';
 import CajaPanel from './components/CajaPanel.vue';
 import AdminPanel from './components/AdminPanel.vue';
 import MenuView from './components/MenuView.vue';
+import socket from './socket';
 
 const isPublicMenu = ref(false);
+const isConnected = ref(false);
 
 // Agrega botón para mostrar/ocultar en el navbar
 
 
 const usuarioStore = useUsuarioStore();
+const pedidoStore = usePedidoStore();
 
 // Cargar usuario guardado al montar
 onMounted(() => {
   usuarioStore.cargarUsuarioGuardado();
+  pedidoStore.iniciarRealTime(); // Iniciar listeners de Socket.io
+  
+  // Monitorear conexión
+  socket.on('connect', () => {
+    isConnected.value = true;
+  });
+  
+  socket.on('disconnect', () => {
+    isConnected.value = false;
+  });
+
   // Detectar si estamos en la ruta pública del menú
   if (window.location.pathname === '/menu') {
     isPublicMenu.value = true;
@@ -111,6 +127,20 @@ const obtenerNombreRol = (rol) => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.connection-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #ef4444; /* Rojo por defecto */
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  transition: background-color 0.3s;
+}
+
+.connection-status.connected {
+  background-color: #10b981; /* Verde cuando conectado */
+  box-shadow: 0 0 8px #10b981;
 }
 
 .logo {

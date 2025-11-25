@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import api from '../api';
+import socket from '../socket';
 
 export function useNotificaciones(rol) {
     const notificaciones = ref([]);
@@ -155,20 +156,56 @@ export function useNotificaciones(rol) {
             Notification.requestPermission();
         }
 
-        // Verificar cada 3 segundos
-        intervalo = setInterval(verificarNotificaciones, 3000);
+        if (!socket.connected) socket.connect();
 
-        // Verificar inmediatamente
-        verificarNotificaciones();
+        // Listeners según rol
+        if (rol === 'cocinero') {
+            socket.on('nuevo_pedido', (pedido) => {
+                mostrarNotificacion(
+                    `pedido-${pedido.id}-nuevo`,
+                    `🆕 Mesa ${pedido.mesa_numero}: Nuevo pedido (${pedido.items_count} items)`,
+                    'nuevo'
+                );
+            });
+        }
+        else if (rol === 'mesero') {
+            socket.on('pedido_actualizado', ({ id, estado }) => {
+                if (estado === 'listo') {
+                    // Necesitamos saber la mesa, pero el evento solo trae ID y estado.
+                    // Podríamos hacer un fetch rápido o confiar en que el store ya se actualizó
+                    // Por simplicidad, mostramos mensaje genérico o hacemos fetch
+                    api.getPedido(id).then(res => {
+                        const p = res.data;
+                        mostrarNotificacion(
+                            `pedido-${id}-listo`,
+                            `✅ Mesa ${p.mesa_numero}: ¡Pedido LISTO! 🎉`,
+                            'listo'
+                        );
+                    });
+                }
+            });
+        }
+        else if (rol === 'facturero') {
+            socket.on('pedido_actualizado', ({ id, estado }) => {
+                if (estado === 'listo_pagar') {
+                    api.getPedido(id).then(res => {
+                        const p = res.data;
+                        mostrarNotificacion(
+                            `pedido-${id}-pago`,
+                            `💰 Mesa ${p.mesa_numero}: Listo para pagar ($${p.total})`,
+                            'pago'
+                        );
+                    });
+                }
+            });
+        }
 
         console.log(`✅ Notificaciones activadas para: ${rol}`);
     });
 
     onUnmounted(() => {
-        if (intervalo) {
-            clearInterval(intervalo);
-            console.log(`❌ Notificaciones desactivadas para: ${rol}`);
-        }
+        socket.off('nuevo_pedido');
+        socket.off('pedido_actualizado');
     });
 
     return {

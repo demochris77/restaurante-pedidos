@@ -136,9 +136,9 @@ const pedidoStore = usePedidoStore();
 const loading = ref(false);
 let autoRefreshInterval = null;
 
-const pedidosNuevos = computed(() => pedidoStore.pedidosPorEstado.nuevo);
-const pedidosEnCocina = computed(() => pedidoStore.pedidosPorEstado.en_cocina);
-const pedidosListos = computed(() => pedidoStore.pedidosPorEstado.listo);
+const pedidosNuevos = computed(() => pedidoStore.pedidosPorEstado.nuevo || []);
+const pedidosEnCocina = computed(() => pedidoStore.pedidosPorEstado.en_cocina || []);
+const pedidosListos = computed(() => pedidoStore.pedidosPorEstado.listo || []);
 
 const actualizarPedidos = async () => {
   loading.value = true;
@@ -188,12 +188,11 @@ const allItemsReady = (pedido) => {
 
 onMounted(() => {
   actualizarPedidos();
-  // Auto-refresh cada 30 segundos
-  autoRefreshInterval = setInterval(actualizarPedidos, 30000);
+  // Auto-refresh eliminado para evitar recargas innecesarias
 });
 
 onUnmounted(() => {
-  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  // Limpieza si fuera necesaria
 });
 </script>
 

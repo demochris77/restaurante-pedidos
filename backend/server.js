@@ -3,6 +3,7 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import http from 'http';
+import { Server } from 'socket.io';
 import { imprimirCuenta, imprimirReciboPago } from './printer-simple.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -23,7 +24,7 @@ const frontendPath = path.join(__dirname, '../frontend/dist');
 
 dotenv.config();
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL
 });
 import os from 'os';
 
@@ -31,6 +32,23 @@ import os from 'os';
 
 const app = express();
 const httpServer = http.createServer(app);
+
+// Configurar Socket.io
+const io = new Server(httpServer, {
+    cors: {
+        origin: "*", // Permitir cualquier origen (ajustar en producción)
+        methods: ["GET", "POST", "PUT", "DELETE"]
+    }
+});
+
+io.on('connection', (socket) => {
+    console.log('🔌 Cliente conectado:', socket.id);
+
+    socket.on('disconnect', () => {
+        console.log('❌ Cliente desconectado:', socket.id);
+    });
+});
+
 // Middlewares
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -57,23 +75,23 @@ app.get('/api/ip', (req, res) => {
 
 // Helpers para consultas seguras con PostgreSQL (!!! Cambia ? por $n en todos los queries !!!)
 const runAsync = async (query, params = []) => {
-  await pool.query(query, params);
+    await pool.query(query, params);
 };
 
 const getAsync = async (query, params = []) => {
-  const res = await pool.query(query, params);
-  return res.rows[0];
+    const res = await pool.query(query, params);
+    return res.rows[0];
 };
 
 const allAsync = async (query, params = []) => {
-  const res = await pool.query(query, params);
-  return res.rows;
+    const res = await pool.query(query, params);
+    return res.rows;
 };
 // ============= BASE DE DATOS =============
 
 const initializeTablesPostgres = async () => {
-  // Usuarios
-  await runAsync(`
+    // Usuarios
+    await runAsync(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
@@ -84,8 +102,8 @@ const initializeTablesPostgres = async () => {
     )
   `);
 
-  // Mesas
-  await runAsync(`
+    // Mesas
+    await runAsync(`
     CREATE TABLE IF NOT EXISTS mesas (
       id SERIAL PRIMARY KEY,
       numero INTEGER UNIQUE NOT NULL,
@@ -95,8 +113,8 @@ const initializeTablesPostgres = async () => {
     )
   `);
 
-  // Items de Menú
-  await runAsync(`
+    // Items de Menú
+    await runAsync(`
     CREATE TABLE IF NOT EXISTS menu_items (
       id TEXT PRIMARY KEY,
       nombre TEXT NOT NULL,
@@ -111,8 +129,8 @@ const initializeTablesPostgres = async () => {
     )
   `);
 
-  // Pedidos
-  await runAsync(`
+    // Pedidos
+    await runAsync(`
     CREATE TABLE IF NOT EXISTS pedidos (
       id TEXT PRIMARY KEY,
       mesa_numero INTEGER NOT NULL,
@@ -128,8 +146,8 @@ const initializeTablesPostgres = async () => {
     )
   `);
 
-  // Pedido items
-  await runAsync(`
+    // Pedido items
+    await runAsync(`
     CREATE TABLE IF NOT EXISTS pedido_items (
       id TEXT PRIMARY KEY,
       pedido_id TEXT NOT NULL,
@@ -144,8 +162,8 @@ const initializeTablesPostgres = async () => {
     )
   `);
 
-  // Transacciones
-  await runAsync(`
+    // Transacciones
+    await runAsync(`
     CREATE TABLE IF NOT EXISTS transacciones (
       id TEXT PRIMARY KEY,
       pedido_id TEXT NOT NULL,
@@ -160,25 +178,25 @@ const initializeTablesPostgres = async () => {
     )
   `);
 
-  // Configuración
-  await runAsync(`
+    // Configuración
+    await runAsync(`
     CREATE TABLE IF NOT EXISTS configuracion (
       clave TEXT PRIMARY KEY,
       valor TEXT
     )
   `);
 
-  // Seed admin user si no existe
-  const row = await getAsync('SELECT count(*) as count FROM usuarios');
-  if (row && Number(row.count) === 0) {
-    await runAsync(
-      'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES ($1, $2, $3, $4, $5)',
-      [uuidv4(), 'admin', 'admin123', 'Administrador Principal', 'admin']
-    );
-    console.log('✓ Usuario admin creado: admin/admin123');
-  }
+    // Seed admin user si no existe
+    const row = await getAsync('SELECT count(*) as count FROM usuarios');
+    if (row && Number(row.count) === 0) {
+        await runAsync(
+            'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES ($1, $2, $3, $4, $5)',
+            [uuidv4(), 'admin', 'admin123', 'Administrador Principal', 'admin']
+        );
+        console.log('✓ Usuario admin creado: admin/admin123');
+    }
 
-  console.log('✓ Tablas inicializadas en Postgres');
+    console.log('✓ Tablas inicializadas en Postgres');
 };
 
 // Inicializa al arrancar
@@ -190,28 +208,28 @@ initializeTablesPostgres();
 
 // POST /api/auth/login
 app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+        }
+        const user = await getAsync(
+            'SELECT * FROM usuarios WHERE username = $1 AND password = $2',
+            [username, password]
+        );
+        if (user) {
+            res.json({
+                id: user.id,
+                nombre: user.nombre,
+                rol: user.rol,
+                username: user.username
+            });
+        } else {
+            res.status(401).json({ error: 'Credenciales inválidas' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-    const user = await getAsync(
-      'SELECT * FROM usuarios WHERE username = $1 AND password = $2',
-      [username, password]
-    );
-    if (user) {
-      res.json({
-        id: user.id,
-        nombre: user.nombre,
-        rol: user.rol,
-        username: user.username
-      });
-    } else {
-      res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // ============= RUTAS: GESTIÓN DE USUARIOS (ADMIN) =============
@@ -228,25 +246,25 @@ app.get('/api/users', async (req, res) => {
 
 // POST /api/users - Crear usuario
 app.post('/api/users', async (req, res) => {
-  try {
-    const { username, password, nombre, rol } = req.body;
-    if (!username || !password || !rol) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
+    try {
+        const { username, password, nombre, rol } = req.body;
+        if (!username || !password || !rol) {
+            return res.status(400).json({ error: 'Faltan datos requeridos' });
+        }
+        // Verificar si ya existe
+        const existing = await getAsync('SELECT id FROM usuarios WHERE username = $1', [username]);
+        if (existing) {
+            return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+        }
+        const id = uuidv4();
+        await runAsync(
+            'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES ($1, $2, $3, $4, $5)',
+            [id, username, password, nombre, rol]
+        );
+        res.json({ id, username, nombre, rol, message: 'Usuario creado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-    // Verificar si ya existe
-    const existing = await getAsync('SELECT id FROM usuarios WHERE username = $1', [username]);
-    if (existing) {
-      return res.status(400).json({ error: 'El nombre de usuario ya existe' });
-    }
-    const id = uuidv4();
-    await runAsync(
-      'INSERT INTO usuarios (id, username, password, nombre, rol) VALUES ($1, $2, $3, $4, $5)',
-      [id, username, password, nombre, rol]
-    );
-    res.json({ id, username, nombre, rol, message: 'Usuario creado' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // DELETE /api/users/:id - Eliminar usuario
@@ -418,12 +436,22 @@ app.post('/api/pedidos', async (req, res) => {
             ]);
         }
 
-        res.json({
-            pedido_id,
+        const nuevoPedido = {
+            id: pedido_id,
             mesa_numero,
+            usuario_mesero_id, // Agregado para que el frontend pueda filtrar
             total,
             estado: 'nuevo',
             items_count: items.length,
+            items: items, // Incluir items para el frontend
+            created_at: new Date()
+        };
+
+        // Emitir evento Socket.io
+        io.emit('nuevo_pedido', nuevoPedido);
+
+        res.json({
+            ...nuevoPedido,
             message: '✓ Pedido creado'
         });
     } catch (error) {
@@ -522,6 +550,9 @@ app.put('/api/pedidos/:id/estado', async (req, res) => {
 
         await runAsync(updateQuery, params);
 
+        // Emitir evento Socket.io
+        io.emit('pedido_actualizado', { id: req.params.id, estado });
+
         res.json({ message: '✓ Pedido actualizado', estado });
 
     } catch (error) {
@@ -542,6 +573,12 @@ app.put('/api/pedido-items/:id/estado', async (req, res) => {
         }
 
         await runAsync('UPDATE pedido_items SET estado = $1 WHERE id = $2', [estado, req.params.id]);
+
+        // Obtener el item actualizado para emitir
+        const item = await getAsync('SELECT * FROM pedido_items WHERE id = $1', [req.params.id]);
+
+        // Emitir evento Socket.io
+        io.emit('item_actualizado', { id: req.params.id, pedido_id: item.pedido_id, estado });
 
         res.json({ message: '✓ Item actualizado', estado });
     } catch (error) {
@@ -575,6 +612,15 @@ app.post('/api/transacciones', async (req, res) => {
 
         // Marcar pedido como pagado
         await runAsync('UPDATE pedidos SET estado = $1 WHERE id = $2', ['pagado', pedido_id]);
+
+        // Emitir evento Socket.io con detalles de pago para el Admin
+        io.emit('pedido_pagado', {
+            pedido_id,
+            estado: 'pagado',
+            monto,
+            metodo_pago,
+            usuario_facturero_id
+        });
 
         res.json({
             transaccion_id,
@@ -772,8 +818,8 @@ app.post('/api/config', async (req, res) => {
         // Usamos INSERT ... ON CONFLICT para upsert en Postgres
         for (const [key, val] of Object.entries(config)) {
             await runAsync(
-              'INSERT INTO configuracion (clave, valor) VALUES ($1, $2) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor',
-              [key, String(val)]
+                'INSERT INTO configuracion (clave, valor) VALUES ($1, $2) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor',
+                [key, String(val)]
             );
         }
 
@@ -801,23 +847,6 @@ app.get('/api/test', (req, res) => {
     });
 });
 
-
-// console.log('📁 Sirviendo frontend desde:', frontendPath);
-
-// Servir archivos estáticos
-// app.use(express.static(frontendPath));
-
-// SPA fallback - todas las rutas van a index.html
-// app.use((req, res, next) => {
-//     // Si no es API, servir index.html
-//     if (!req.path.startsWith('/api')) {
-//         res.sendFile(path.join(frontendPath, 'index.html'));
-//     } else {
-//         // Si es API y no se encontró, pasar al 404
-//         next();
-//     }
-// });
-
 // ============= MANEJO DE ERRORES =============
 
 // 404 (Solo para API, ya que el frontend atrapó lo demás)
@@ -831,24 +860,12 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: err.message });
 });
 
-
-
 // ============= INICIAR SERVIDOR =============
 
 const PORT = process.env.PORT || 3000;
-
 httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log('\n' + '='.repeat(60));
-    console.log('✓ SERVIDOR CORRIENDO');
-    console.log('='.repeat(60));
-    console.log(`\n📍 Acceso local: http://localhost:${PORT}`);
-    console.log(`📍 Acceso red:    http://${process.env.HOST}:${PORT}`);
-    console.log(`\n🧪 Prueba:       http://localhost:${PORT}/api/test`);
-    console.log(`📊 Menú:         http://localhost:${PORT}/api/menu`);
-    console.log(`🪑 Mesas:        http://localhost:${PORT}/api/mesas`);
-    console.log('\n' + '='.repeat(60) + '\n');
+    console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
-
 
 // Cerrar BD al terminar
 process.on('SIGINT', async () => {

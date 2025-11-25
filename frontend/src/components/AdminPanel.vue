@@ -150,8 +150,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import api from '../api';
+import socket from '../socket';
 import GeneradorQR from './GeneradorQR.vue';
 import AdminUsers from './AdminUsers.vue';
 import EditorPanel from './EditorPanel.vue';
@@ -169,7 +170,7 @@ const totalAcumulado = ref({ total_transacciones: 0, total_acumulado: 0 });
 
 const ventasTotal = computed(() => {
   return detallesVentas.value
-    .reduce((sum, m) => sum + (m.total || 0), 0)
+    .reduce((sum, m) => sum + (Number(m.total) || 0), 0)
     .toFixed(2);
 });
 
@@ -211,8 +212,60 @@ const formatearHora = (timestamp) => {
   });
 };
 
+// ================= REAL-TIME =================
+const setupRealTime = () => {
+    if (!socket.connected) socket.connect();
+
+    socket.on('nuevo_pedido', (nuevoPedido) => {
+        // Agregar a la lista de hoy
+        pedidosHoy.value.unshift({
+            ...nuevoPedido,
+            mesero: '...' // El nombre del mesero no viene en el evento, se actualizará al recargar o podríamos buscarlo si tuviéramos la lista de usuarios
+        });
+    });
+
+    socket.on('pedido_actualizado', ({ id, estado }) => {
+        const pedido = pedidosHoy.value.find(p => p.id === id);
+        if (pedido) {
+            pedido.estado = estado;
+        }
+    });
+
+    socket.on('pedido_pagado', ({ pedido_id, estado, monto, metodo_pago }) => {
+        // Actualizar estado del pedido
+        const pedido = pedidosHoy.value.find(p => p.id === pedido_id);
+        if (pedido) {
+            pedido.estado = estado;
+        }
+
+        // Actualizar estadísticas de ventas
+        const metodoExistente = detallesVentas.value.find(d => d.metodo_pago === metodo_pago);
+        if (metodoExistente) {
+            metodoExistente.cantidad = Number(metodoExistente.cantidad) + 1;
+            metodoExistente.total = Number(metodoExistente.total) + Number(monto);
+        } else {
+            detallesVentas.value.push({
+                metodo_pago,
+                cantidad: 1,
+                total: Number(monto)
+            });
+        }
+
+        // Actualizar histórico (simple aproximación visual, para exactitud mejor recargar)
+        totalAcumulado.value.total_transacciones = Number(totalAcumulado.value.total_transacciones) + 1;
+        totalAcumulado.value.total_acumulado = Number(totalAcumulado.value.total_acumulado) + Number(monto);
+    });
+};
+
 onMounted(() => {
   cargarReportes();
+  setupRealTime();
+});
+
+onUnmounted(() => {
+    socket.off('nuevo_pedido');
+    socket.off('pedido_actualizado');
+    socket.off('pedido_pagado');
 });
 </script>
 

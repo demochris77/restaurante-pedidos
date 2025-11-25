@@ -1,10 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import MenuView from './components/MenuView.vue';       // Importa desde components
-import HomeView from './components/HomeView.vue';       // Pon algo aquí o crea el archivo
+import HomeView from './components/HomeView.vue';
+import MenuView from './components/MenuView.vue';
+import PedidoStatus from './components/PedidoStatus.vue';
 
 const routes = [
   { path: '/', component: HomeView },
-  { path: '/menu', component: MenuView }
+  { path: '/menu', component: MenuView },
+  { path: '/pedido/:id/status', component: PedidoStatus }
 ];
 
 const router = createRouter({
