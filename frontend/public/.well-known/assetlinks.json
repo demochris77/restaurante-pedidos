@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "app.vercel.restaurante_pedidos.twa",
+            "sha256_cert_fingerprints": [
+                "BB:05:F5:9A:35:5A:E3:99:A7:E7:CF:9D:4B:3B:2F:BC:AA:C9:FD:85:3C:0A:49:86:E3:0D:B1:67:E4:D4:0E:C8"
+            ]
+        }
+    }
+]
