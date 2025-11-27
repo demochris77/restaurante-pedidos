@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
 // POST /api/menu - Crear nuevo item del menú
 router.post('/', async (req, res) => {
     try {
-        const { nombre, categoria, precio, tiempo_estimado, disponible, descripcion, usa_inventario, stock_actual, stock_minimo, estado_inventario } = req.body;
+        const { nombre, categoria, precio, tiempo_estimado, disponible, descripcion, usa_inventario, stock_actual, stock_minimo, estado_inventario, es_directo } = req.body;
 
         if (!nombre || !categoria || !precio) {
             return res.status(400).json({ error: 'Nombre, categoría y precio son requeridos' });
@@ -29,9 +29,9 @@ router.post('/', async (req, res) => {
         const query = `
             INSERT INTO menu_items(
                 id, nombre, categoria, precio, tiempo_estimado, disponible, descripcion,
-                usa_inventario, stock_actual, stock_minimo, estado_inventario
+                usa_inventario, stock_actual, stock_minimo, estado_inventario, es_directo
             )
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         `;
 
         await runAsync(query, [
@@ -45,7 +45,8 @@ router.post('/', async (req, res) => {
             usa_inventario || false,
             stock_actual || null,
             stock_minimo || null,
-            estado_inventario || 'disponible'
+            estado_inventario || 'disponible',
+            es_directo || false // ✅ Nuevo campo
         ]);
 
         res.json({
@@ -60,6 +61,7 @@ router.post('/', async (req, res) => {
             stock_actual,
             stock_minimo,
             estado_inventario: estado_inventario || 'disponible',
+            es_directo: es_directo || false,
             message: '✓ Item agregado'
         });
     } catch (error) {
@@ -70,14 +72,14 @@ router.post('/', async (req, res) => {
 // PUT /api/menu/:id - Actualizar item del menú
 router.put('/:id', async (req, res) => {
     try {
-        const { nombre, categoria, precio, tiempo_estimado, disponible, descripcion, usa_inventario, stock_actual, stock_minimo, estado_inventario } = req.body;
+        const { nombre, categoria, precio, tiempo_estimado, disponible, descripcion, usa_inventario, stock_actual, stock_minimo, estado_inventario, es_directo } = req.body;
 
         const query = `
             UPDATE menu_items 
             SET nombre = $1, categoria = $2, precio = $3, tiempo_estimado = $4, 
                 disponible = $5, descripcion = $6, usa_inventario = $7, 
-                stock_actual = $8, stock_minimo = $9, estado_inventario = $10
-            WHERE id = $11
+                stock_actual = $8, stock_minimo = $9, estado_inventario = $10, es_directo = $11
+            WHERE id = $12
         `;
 
         await runAsync(query, [
@@ -91,6 +93,7 @@ router.put('/:id', async (req, res) => {
             stock_actual,
             stock_minimo,
             estado_inventario,
+            es_directo || false, // ✅ Nuevo campo
             req.params.id
         ]);
 
@@ -99,6 +102,7 @@ router.put('/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // DELETE /api/menu/:id - Eliminar item del menú
 router.delete('/:id', async (req, res) => {

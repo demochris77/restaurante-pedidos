@@ -143,55 +143,6 @@
             </div>
           </div>
         </div>
-        <!-- Ticket para Impresión (Oculto en pantalla) -->
-        <!-- Ticket para Impresión (Oculto en pantalla) -->
-        <div id="ticket" class="ticket-impresion" v-if="ticketData">
-          <div class="ticket-content">
-            <div class="ticket-header">
-              <h3>🍽️ RESTAURANTE SAZON DE LA SIERRA</h3>
-              <p>NIT: 900.123.456-7</p>
-              <p>Calle 123 # 45-67</p>
-              <p>Tel: (601) 123 4567</p>
-              <div class="divider">================================</div>
-              <p>Fecha: {{ new Date().toLocaleString() }}</p>
-              <p>Mesa: {{ ticketData.mesa }}</p>
-              <p>Cajero: {{ ticketData.cajero }}</p>
-              <div class="divider">--------------------------------</div>
-              <p v-if="ticketData.tipo === 'pago'">COMPROBANTE DE PAGO</p>
-              <p v-if="ticketData.metodoPago">Método: {{ ticketData.metodoPago.toUpperCase() }}</p>
-              <p v-else-if="ticketData.tipo !== 'pago'">CUENTA DE COBRO</p>
-              <div class="divider">================================</div>
-            </div>
-            
-            <div class="ticket-body">
-              <div class="ticket-row header-row">
-                <span class="col-cant">Cant</span>
-                <span class="col-desc">Desc</span>
-                <span class="col-total">Total</span>
-              </div>
-              <div v-for="(item, index) in ticketData.items" :key="index" class="ticket-row">
-                <span class="col-cant">{{ item.cantidad }}</span>
-                <span class="col-desc">{{ item.nombre }}</span>
-                <span class="col-total">${{ (item.cantidad * item.precio).toFixed(2) }}</span>
-              </div>
-            </div>
-            
-            <div class="ticket-total-section">
-              <div class="divider">--------------------------------</div>
-              <div class="ticket-row total-row">
-                <span>TOTAL:</span>
-                <span>${{ ticketData.total }}</span>
-              </div>
-              <div class="divider">================================</div>
-            </div>
-            
-            <div class="ticket-footer">
-              <p>¡Gracias por su visita!</p>
-              <p>Propina voluntaria sugerida</p>
-              <p>Regimen Simplificado</p>
-            </div>
-          </div>
-        </div>
       </template>
     </div>
 
@@ -348,33 +299,133 @@ const formatearHora = (fecha) => {
   return new Date(fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+// ✅ FUNCIÓN CORREGIDA: Agrupa items para el ticket
 const prepararTicket = (pedido, tipo, metodo = null) => {
+  // Lógica de agrupación
+  const itemsAgrupadosParaTicket = {};
+  
+  (pedido.items || []).forEach(item => {
+    // Usamos ID del menú o nombre como clave única
+    const key = item.menu_item_id || item.nombre;
+    
+    if (!itemsAgrupadosParaTicket[key]) {
+      itemsAgrupadosParaTicket[key] = {
+        nombre: item.nombre,
+        precio: Number(item.precio_unitario || item.precio || 0),
+        cantidad: 0
+      };
+    }
+    
+    // Sumamos cantidad
+    itemsAgrupadosParaTicket[key].cantidad += (item.cantidad || 1);
+  });
+
+  // Convertir objeto agrupado a array
+  const itemsFinales = Object.values(itemsAgrupadosParaTicket);
+
   ticketData.value = {
     tipo,
     mesa: pedido.mesa_numero,
     total: pedido.total,
-    // El backend devuelve 'precio_unitario', pero a veces puede ser 'precio'
-    items: (pedido.items || []).map(item => ({
-      ...item,
-      precio: item.precio_unitario || item.precio || 0
-    })),
+    items: itemsFinales, // Usamos la lista agrupada
     cajero: usuarioStore.usuario.nombre,
     metodoPago: metodo
   };
 };
 
+
+// ✅ FUNCIÓN CORREGIDA (Escapando etiquetas)
+const imprimirContenido = (data) => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('❌ Por favor permite ventanas emergentes para imprimir el ticket');
+    return;
+  }
+
+  const contenidoHTML = `
+    <html>
+    <head>
+      <title>Ticket - Restaurante Sazón de la Sierra</title>
+      <style>
+        body { font-family: 'Courier New', monospace; width: 300px; margin: 0 auto; padding: 10px; font-size: 12px; }
+        .header { text-align: center; margin-bottom: 10px; }
+        .header h3 { margin: 0 0 5px 0; font-size: 16px; }
+        .header p { margin: 2px 0; }
+        .divider { border-top: 1px dashed black; margin: 8px 0; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .col-cant { width: 10%; }
+        .col-desc { width: 65%; }
+        .col-total { width: 25%; text-align: right; }
+        .total-section { font-size: 16px; font-weight: bold; margin-top: 10px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h3>RESTAURANTE SAZÓN DE LA SIERRA</h3>
+        <p>NIT: 900.123.456-7</p>
+        <p>Fecha: ${new Date().toLocaleString()}</p>
+        <p>Mesa: ${data.mesa}</p>
+        <p>Cajero: ${data.cajero}</p>
+        <div class="divider"></div>
+        <p>${data.tipo === 'pago' ? 'COMPROBANTE DE PAGO' : 'CUENTA DE COBRO'}</p>
+        ${data.metodoPago ? `<p>Método: ${data.metodoPago.toUpperCase()}</p>` : ''}
+        <div class="divider"></div>
+      </div>
+
+      <div class="items">
+        <div class="row" style="font-weight:bold; border-bottom:1px solid black;">
+          <span class="col-cant">Cant</span>
+          <span class="col-desc">Desc</span>
+          <span class="col-total">Total</span>
+        </div>
+        ${data.items.map(item => `
+          <div class="row">
+            <span class="col-cant">${item.cantidad}</span>
+            <span class="col-desc">${item.nombre}</span>
+            <span class="col-total">$${(item.cantidad * item.precio).toFixed(2)}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="total-section">
+        <div class="divider"></div>
+        <div class="row">
+          <span>TOTAL:</span>
+          <span>$${data.total}</span>
+        </div>
+        <div class="divider"></div>
+      </div>
+
+      <div class="footer">
+        <p>¡Gracias por su visita!</p>
+        <p>Propina voluntaria sugerida</p>
+      </div>
+      
+      <script>
+        window.onload = function() {
+          window.print();
+          // setTimeout(() => window.close(), 1000);
+        }
+      <\/script> 
+    <\/body>
+    <\/html>
+  `;
+  // ⬆️ FIJATE ARRIBA: He puesto la barra invertida \ antes de las barras /
+
+  printWindow.document.write(contenidoHTML);
+  printWindow.document.close();
+};
+
 const pedirCuenta = async (pedido) => {
   try {
-    // 1. Preparar datos para impresión
+    // 1. Preparar datos
     prepararTicket(pedido, 'cuenta');
     
-    // Esperar a que el DOM se actualice con el ticket
-    await nextTick();
+    // 2. Imprimir usando ventana nueva (Funciona en móvil)
+    imprimirContenido(ticketData.value);
     
-    // 2. Abrir diálogo de impresión del navegador
-    window.print();
-    
-    // 3. Cambiar estado a 'en_caja'
+    // 3. Actualizar estado
     await pedidoStore.actualizarEstadoPedido(pedido.id, 'en_caja');
     
   } catch (err) {
@@ -394,14 +445,14 @@ const procesarPago = async () => {
       metodoSeleccionado.value
     );
     
-    // Preparar ticket de pago con el método seleccionado
+    // Preparar datos
     prepararTicket(pedidoSeleccionado.value, 'pago', metodoSeleccionado.value);
-    await nextTick();
     
-    // Imprimir
-    window.print();
-
     alert('✅ Pago registrado con éxito');
+    // Imprimir
+    imprimirContenido(ticketData.value);
+
+    
     cancelarPago();
     await actualizarPedidos();
   } catch (err) {
@@ -428,522 +479,4 @@ onMounted(() => {
   actualizarPedidos();
 });
 </script>
-<style scoped>
-.loading {
-  text-align: center;
-  padding: 40px;
-}
-
-/* Notificaciones */
-.notificaciones-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 350px;
-  pointer-events: none;
-}
-
-.notificacion {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  border-left: 4px solid #999;
-  animation: slideIn 0.3s ease-out;
-  font-weight: 600;
-  max-width: 300px;
-  pointer-events: auto;
-}
-
-.btn-cerrar-notif {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 0;
-  margin-left: 12px;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
-}
-
-.btn-cerrar-notif:hover {
-  opacity: 1;
-}
-
-.notif-nuevo {
-  border-left-color: #ef4444;
-  background: #fee2e2;
-}
-
-.notif-listo {
-  border-left-color: #10b981;
-  background: #ecfdf5;
-}
-
-.notif-pago {
-  border-left-color: #f59e0b;
-  background: #fef3c7;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(400px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@media (max-width: 768px) {
-  .pedidos-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .notificaciones-container {
-    right: 10px;
-    left: 10px;
-    top: 70px;
-  }
-
-  .metodo-btn {
-    font-size: 11px;
-  }
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border-radius: 8px;
-}
-
-.section {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.section h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
-}
-
-.pedidos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.pedido-card {
-  border: 2px solid var(--color-border);
-  border-radius: 8px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.pedido-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.mesa {
-  font-weight: 700;
-}
-
-.total {
-  color: var(--color-success);
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.items-count {
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 12px;
-}
-
-.pago-section {
-  border: 2px solid var(--color-success);
-  background: rgba(16, 185, 129, 0.05);
-}
-
-.pago-info {
-  background: var(--color-bg);
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.payment-methods {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.metodo-btn {
-  padding: 10px;
-  border: 2px solid var(--color-border);
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s;
-}
-
-.metodo-btn:hover {
-  border-color: var(--color-success);
-}
-
-.metodo-btn.metodo-active {
-  background: var(--color-success);
-  color: white;
-  border-color: var(--color-success);
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.cambio {
-  margin-top: 8px;
-  padding: 8px;
-  background: #ecfdf5;
-  border-left: 3px solid var(--color-success);
-  color: #065f46;
-  font-weight: 600;
-}
-
-.btn-full {
-  width: 100%;
-  margin-bottom: 8px;
-}
-
-.pagos-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.pago-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.pago-info-item {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.pago-detalles-extra {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.metodo-pago-badge {
-  font-size: 11px;
-  background: #f3f4f6;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #e5e7eb;
-  color: #374151;
-  font-weight: 600;
-}
-
-.mesa {
-  font-weight: 600;
-}
-
-.monto {
-  color: var(--color-success);
-  font-weight: 700;
-}
-
-.timestamp {
-  font-size: 12px;
-  color: #999;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #999;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-}
-
-@media (max-width: 768px) {
-  .pedidos-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .payment-methods {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.ticket-impresion {
-  display: none;
-}
-
-@media print {
-  /* Ocultar TODO por defecto */
-  body > * {
-    display: none !important;
-  }
-
-  /* Asegurar que el ticket se vea */
-  body > .ticket-impresion,
-  .ticket-impresion {
-    display: block !important;
-    position: absolute !important;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    background: white;
-    z-index: 9999;
-  }
-
-  .ticket-content {
-    width: 300px; /* Ancho típico de impresora térmica */
-    margin: 0 auto;
-    padding: 10px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 12px;
-    color: black;
-  }
-
-  .ticket-header {
-    text-align: center;
-  }
-  
-  .ticket-header h3 {
-    margin: 0 0 5px 0;
-    font-size: 16px;
-  }
-  
-  .ticket-header p {
-    margin: 2px 0;
-  }
-
-  .divider {
-    text-align: center;
-    margin: 5px 0;
-    white-space: pre;
-  }
-
-  .ticket-row {
-    display: flex !important;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-  
-  .header-row {
-    font-weight: bold;
-    border-bottom: 1px dashed black;
-    padding-bottom: 2px;
-    margin-bottom: 5px;
-  }
-  
-  .col-cant { width: 15%; text-align: left; }
-  .col-desc { width: 60%; text-align: left; }
-  .col-total { width: 25%; text-align: right; }
-
-  .total-row {
-    font-weight: bold;
-    font-size: 16px;
-  }
-
-  .ticket-footer {
-    text-align: center;
-    margin-top: 15px;
-    font-size: 10px;
-  }
-  
-  .ticket-footer p {
-    margin: 2px 0;
-  }
-  
-  /* Restaurar visibilidad de hijos del ticket */
-  .ticket-impresion * {
-    display: block;
-    visibility: visible;
-  }
-}
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-.modal-detalle {
-  background: white;
-  border-radius: 12px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 2px solid #f3f4f6;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.btn-cerrar {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-  transition: color 0.2s;
-}
-
-.btn-cerrar:hover {
-  color: #000;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.detalle-info {
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.detalle-items {
-  margin-bottom: 20px;
-}
-
-.detalle-items h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-}
-
-.items-tabla {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.item-row {
-  display: grid;
-  grid-template-columns: 60px 1fr 80px 80px;
-  gap: 12px;
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.item-row:last-child {
-  border-bottom: none;
-}
-
-.item-row.header-row {
-  background: #f3f4f6;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.item-row span:nth-child(1) {
-  text-align: center;
-}
-
-.item-row span:nth-child(3),
-.item-row span:nth-child(4) {
-  text-align: right;
-}
-
-.detalle-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.btn-info {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.btn-info:hover {
-  background: #2563eb;
-}
-
-</style>
+<style src="../assets/styles/CajaPanel.css" scoped></style>

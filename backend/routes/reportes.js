@@ -155,12 +155,12 @@ router.get('/tiempos-cocina', async (req, res) => {
     }
 });
 
-// GET /api/reportes/top-platos - Top platos más pedidos
+// GET /api/reportes/top-platos - Top platos más pedidos (con filtro de fechas opcional)
 router.get('/top-platos', async (req, res) => {
     try {
-        const { limit = 10 } = req.query;
+        const { limit = 10, fecha_inicio, fecha_fin } = req.query;
 
-        const topPlatos = await allAsync(`
+        let query = `
             SELECT 
                 mi.id,
                 mi.nombre,
@@ -172,15 +172,34 @@ router.get('/top-platos', async (req, res) => {
             JOIN menu_items mi ON pi.menu_item_id = mi.id
             JOIN pedidos p ON pi.pedido_id = p.id
             WHERE p.estado != 'cancelado'
+        `;
+
+        const params = [];
+        let paramIndex = 1;
+
+        // ✅ AGREGAR LOGICA DE FECHAS
+        if (fecha_inicio && fecha_fin) {
+            query += ` AND p.created_at::date BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+            params.push(fecha_inicio, fecha_fin);
+            paramIndex += 2;
+        }
+
+        query += `
             GROUP BY mi.id, mi.nombre, mi.categoria, mi.precio
             ORDER BY total_pedidos DESC
-            LIMIT $1
-        `, [parseInt(limit)]);
+            LIMIT $${paramIndex}
+        `;
+
+        params.push(parseInt(limit));
+
+        const topPlatos = await allAsync(query, params);
 
         res.json(topPlatos);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: error.message });
     }
 });
+
 
 export default router;

@@ -61,39 +61,59 @@ router.post('/', async (req, res) => {
         const pedidoQuery = `
             INSERT INTO pedidos(id, mesa_numero, usuario_mesero_id, total, notas, estado)
             VALUES($1, $2, $3, $4, $5, 'nuevo')
-                `;
+        `;
         await runAsync(pedidoQuery, [pedido_id, mesa_numero, usuario_mesero_id, total, notas || null]);
 
         for (const item of items) {
+            // ✅ OBTENER CONFIGURACIÓN DEL ITEM (Para saber si es directo)
+            const menuItemData = await getAsync('SELECT es_directo, usa_inventario, stock_actual, stock_minimo, estado_inventario FROM menu_items WHERE id = $1', [item.menu_item_id]);
+
+            // ✅ DETERMINAR ESTADO INICIAL
+            const estadoInicial = menuItemData?.es_directo ? 'listo' : 'pendiente';
+            // Si es directo, guardamos la hora de completado de una vez
+            const completedAt = menuItemData?.es_directo ? 'CURRENT_TIMESTAMP' : 'NULL';
+
             for (let i = 0; i < item.cantidad; i++) {
                 const item_id = uuidv4();
-                const itemQuery = `
-                    INSERT INTO pedido_items(id, pedido_id, menu_item_id, cantidad, precio_unitario, notas, estado)
-                    VALUES($1, $2, $3, $4, $5, $6, $7)
-                `;
-                await runAsync(itemQuery, [
-                    item_id,
-                    pedido_id,
-                    item.menu_item_id,
-                    1,
-                    item.precio_unitario,
-                    item.notas || null,
-                    'pendiente'
-                ]);
+
+                // Insertar item con estado dinámico
+                // Nota: Usamos concatenación segura o lógica condicional para CURRENT_TIMESTAMP
+                if (menuItemData?.es_directo) {
+                    await runAsync(
+                        `INSERT INTO pedido_items(id, pedido_id, menu_item_id, cantidad, precio_unitario, notas, estado, completed_at) 
+                         VALUES($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
+                        [item_id, pedido_id, item.menu_item_id, 1, item.precio_unitario, item.notas || null, 'listo']
+                    );
+
+                    // ✅ NOTIFICAR AL MESERO DE INMEDIATO
+                    req.app.get('io').emit('item_ready', {
+                        item_id: item_id,
+                        pedido_id: pedido_id,
+                        mesa_numero: mesa_numero,
+                        item_nombre: item.nombre,
+                        mesero_id: usuario_mesero_id,
+                        cantidad: 1,
+                        completed_at: new Date().toISOString(), // Para el timer del frontend
+                        tiempoDesdeReady: 0
+                    });
+
+                } else {
+                    await runAsync(
+                        `INSERT INTO pedido_items(id, pedido_id, menu_item_id, cantidad, precio_unitario, notas, estado) 
+                         VALUES($1, $2, $3, $4, $5, $6, $7)`,
+                        [item_id, pedido_id, item.menu_item_id, 1, item.precio_unitario, item.notas || null, 'pendiente']
+                    );
+                }
             }
 
-            const menuItem = await getAsync(
-                'SELECT usa_inventario, stock_actual, stock_minimo, estado_inventario FROM menu_items WHERE id = $1',
-                [item.menu_item_id]
-            );
-
-            if (menuItem && menuItem.usa_inventario) {
-                const nuevoStock = (menuItem.stock_actual || 0) - item.cantidad;
-                let nuevoEstado = menuItem.estado_inventario;
+            // Lógica de Inventario (sin cambios, solo usando menuItemData ya consultado)
+            if (menuItemData && menuItemData.usa_inventario) {
+                const nuevoStock = (menuItemData.stock_actual || 0) - item.cantidad;
+                let nuevoEstado = menuItemData.estado_inventario;
 
                 if (nuevoStock <= 0) {
                     nuevoEstado = 'no_disponible';
-                } else if (nuevoStock <= menuItem.stock_minimo) {
+                } else if (nuevoStock <= menuItemData.stock_minimo) {
                     nuevoEstado = 'poco_stock';
                 }
 
@@ -101,7 +121,7 @@ router.post('/', async (req, res) => {
                     UPDATE menu_items 
                     SET stock_actual = $1, estado_inventario = $2
                     WHERE id = $3
-            `, [Math.max(0, nuevoStock), nuevoEstado, item.menu_item_id]);
+                `, [Math.max(0, nuevoStock), nuevoEstado, item.menu_item_id]);
             }
         }
 
@@ -128,6 +148,7 @@ router.post('/', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // GET /api/pedidos/activos - Obtener pedidos activos
 router.get('/activos', async (req, res) => {
@@ -466,19 +487,33 @@ router.get('/:id/status-publico', async (req, res) => {
 
         const progreso = totalItems > 0 ? Math.round(((itemsServidos + itemsListos) / totalItems) * 100) : 0;
 
-        const tiempoTranscurrido = pedido.started_at
-            ? Math.floor((new Date() - new Date(pedido.started_at)) / 60000)
-            : 0;
+        // ✅ LÓGICA MEJORADA DEL TIMER
+        let tiempoTranscurrido = 0;
+        if (pedido.started_at) {
+            const inicio = new Date(pedido.started_at);
+            // Si el pedido tiene fecha de entrega (servido), usamos esa. Si no, usamos ahora.
+            // Nota: Asegúrate de que 'delivered_at' o 'completed_at' se guarde cuando marcas como servido/pagado.
+            // Si usas 'delivered_at' en tu tabla, cámbialo aquí. Si usas 'completed_at', usa ese.
+            // Asumiré que cuando está servido ya tienes una fecha final, o si el estado es 'servido'/'pagado' usamos la fecha de ese momento si la tienes, o 'ahora' si no ha terminado.
+
+            let fin = new Date(); // Por defecto ahora
+
+            // Si ya finalizó (servido, pagado, etc), intentamos usar la fecha real de fin
+            if (['servido', 'listo_pagar', 'en_caja', 'pagado'].includes(pedido.estado)) {
+                if (pedido.delivered_at) fin = new Date(pedido.delivered_at);
+                else if (pedido.completed_at) fin = new Date(pedido.completed_at);
+                // Si no hay fecha guardada, el timer seguirá corriendo hasta que se guarde una fecha en BD
+            }
+
+            tiempoTranscurrido = Math.floor((fin - inicio) / 60000);
+        }
 
         console.log('🕐 DEBUG Backend:', {
             started_at: pedido.started_at,
-            tiempoTranscurrido: tiempoTranscurrido,
-            ahora: new Date(),
-            diferencia_ms: new Date() - new Date(pedido.started_at)
+            estado: pedido.estado,
+            tiempoTranscurrido: tiempoTranscurrido
         });
 
-
-        // ✅ CAMBIO: Asignar explícitamente
         const pedidoConTiempo = {
             ...pedido,
             tiempoTranscurrido
@@ -506,5 +541,6 @@ router.get('/:id/status-publico', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 export default router;

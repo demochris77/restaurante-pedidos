@@ -9,7 +9,7 @@ const routes = [
   { path: '/menu', component: MenuView },
   { path: '/pedido/:id/status', component: PedidoStatus },
   { path: '/mesa/:id', component: PedidoStatus },
-  { path: '/mesas-qr', component: MesasQR }
+  { path: '/mesas-qr', name: 'mesas-qr', component: MesasQR }
 ];
 
 const router = createRouter({

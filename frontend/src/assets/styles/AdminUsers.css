@@ -1,0 +1,274 @@
+/* =========================================
+   LAYOUT & GENERAL
+   ========================================= */
+.admin-users {
+    padding: 24px;
+    max-width: 1400px;
+    /* Aumentado para aprovechar pantallas anchas */
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    padding: 20px 24px;
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.btn-volver {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-volver:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* =========================================
+   SECCIONES
+   ========================================= */
+.section {
+    background: white;
+    padding: 32px;
+    /* Más padding interno */
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.section h3 {
+    margin-top: 0;
+    color: #1f2937;
+    font-size: 18px;
+    font-weight: 700;
+    border-bottom: 2px solid #f3f4f6;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+/* =========================================
+   FORMULARIO DE CREACIÓN (RESPONSIVE GRID)
+   ========================================= */
+.create-form {
+    display: grid;
+    /* 
+     Magia Responsive: 
+     Crea columnas automáticas que tengan mínimo 250px de ancho.
+     Si hay espacio, caben 4. Si no, bajan a 2 o 1.
+  */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: end;
+    /* Alinea el botón con los inputs */
+}
+
+/* Elimina los .form-row antiguos, ya no son necesarios con el grid */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #6366f1;
+    outline: none;
+}
+
+.btn-crear {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 45px;
+    /* Para alinear altura con inputs */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.btn-crear:hover:not(:disabled) {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.btn-crear:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   TABLA DE USUARIOS
+   ========================================= */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+    /* Evita que se aplaste demasiado */
+}
+
+th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #4b5563;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+td {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover {
+    background: #f9fafb;
+}
+
+/* =========================================
+   BADGES Y ACCIONES
+   ========================================= */
+.rol-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.rol-badge.admin {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.rol-badge.mesero {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.rol-badge.cocinero {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.rol-badge.facturero {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.btn-delete {
+    background: #fee2e2;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 16px;
+    color: #dc2626;
+    transition: all 0.2s;
+}
+
+.btn-delete:hover {
+    background: #fecaca;
+    transform: scale(1.1);
+}
+
+/* =========================================
+   ESTADOS VACÍOS Y CARGA
+   ========================================= */
+.loading,
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+    font-weight: 500;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px dashed #d1d5db;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+@media (max-width: 768px) {
+    .admin-users {
+        padding: 16px;
+    }
+
+    .header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .create-form {
+        grid-template-columns: 1fr;
+        /* En móvil, una sola columna */
+    }
+
+    .btn-crear {
+        width: 100%;
+    }
+}

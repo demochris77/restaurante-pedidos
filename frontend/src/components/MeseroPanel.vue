@@ -3,6 +3,9 @@
     <div class="panel-header">
       <h2>📝 Tomar Pedido</h2>
       <div class="header-buttons">
+        <button @click="abrirQRMesas" class="btn btn-secondary" style="margin-right: 8px;">
+          🖨️ Mesas QRs
+        </button>
         <button @click="mostrarQRMenu" class="btn btn-info" style="margin-right: 8px;">
           📱 QR Menú
         </button>
@@ -206,7 +209,7 @@ import { useNotificaciones } from '../composables/useNotificaciones';
 import GeneradorQR from './GeneradorQR.vue';
 import api from '../api';
 import socket from '../socket';
-
+import { useRouter } from 'vue-router'; // 1. Importar useRouter
 const { notificaciones, cerrarNotificacion } = useNotificaciones('mesero');
 
 const pedidoStore = usePedidoStore();
@@ -221,7 +224,17 @@ const qrComponent = ref(null);
 const mostrarQR = ref(false);
 const urlParaQR = ref('');
 const now = ref(Date.now()); // Reactive time for "Listo hace..."
+const router = useRouter(); // 2. Instanciar router
 
+const abrirQRMesas = () => {
+  // Opción A: Si usas Vue Router con nombre
+  const routeData = router.resolve({ name: 'mesas-qr' });
+  window.open(routeData.href, '_blank');
+
+  // Opción B: Url directa (Más simple y seguro si no recuerdas el name de la ruta)
+  // const url = `${window.location.origin}/mesas-qr`; 
+  // window.open(url, '_blank');
+};
 const mostrarQRCliente = (pedidoId) => {
   const baseUrl = window.location.origin;
   urlParaQR.value = `${baseUrl}/pedido/${pedidoId}/status`;

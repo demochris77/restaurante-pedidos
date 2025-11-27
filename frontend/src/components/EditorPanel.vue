@@ -1,123 +1,161 @@
 <template>
   <div class="editor-panel">
-    <div class="header-actions no-print">
-      <h2>🛠️ Editor de Restaurante</h2>
-      <div class="tabs">
+    <!-- HEADER Y NAVEGACIÓN -->
+    <div class="editor-header no-print">
+      <div class="header-top">
+        <h2>🛠️ Editor</h2>
+        <button @click="$emit('volver')" class="btn-volver" title="Volver al Panel">
+          <span class="icon">⬅️</span> <span class="text">Volver</span>
+        </button>
+      </div>
+
+      <div class="tabs-container">
         <button 
           :class="['tab-btn', { active: activeTab === 'menu' }]" 
           @click="activeTab = 'menu'"
+          title="Menú"
         >
-          🍔 Menú
+          <span class="tab-icon">🍔</span>
+          <span class="tab-text">Menú</span>
         </button>
         <button 
           :class="['tab-btn', { active: activeTab === 'config' }]" 
           @click="activeTab = 'config'"
+          title="Configuración"
         >
-          ⚙️ Configuración PDF/QR
+          <span class="tab-icon">⚙️</span>
+          <span class="tab-text">Configuración</span>
         </button>
         <button 
           :class="['tab-btn', { active: activeTab === 'mesas' }]" 
           @click="activeTab = 'mesas'"
+          title="Mesas"
         >
-          🪑 Mesas
+          <span class="tab-icon">🪑</span>
+          <span class="tab-text">Mesas</span>
         </button>
-        <button @click="$emit('volver')" class="btn-volver">← Volver</button>
       </div>
     </div>
 
-    <!-- TAB: MENÚ -->
-    <div v-if="activeTab === 'menu'" class="tab-content">
-      <div class="menu-controls no-print">
-        <a :href="urlMenu" target="_blank" class="btn-primary">
-          � Ver Menú Digital / PDF
-        </a>
-      </div>
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="panel-body">
+      
+      <!-- TAB: MENÚ -->
+      <div v-if="activeTab === 'menu'" class="tab-content fade-in">
+        <!-- Botón Ver Menú -->
+        <div class="menu-actions no-print">
+          <a :href="urlMenuDinamica" target="_blank" class="btn-ver-menu">
+            <span class="icon">📄</span> 
+            Ver Menú Digital / PDF
+            <span class="external-icon">↗</span>
+          </a>
+        </div>
 
-      <!-- VISTA DE EDICIÓN -->
-      <div class="editor-view">
         <!-- Formulario Nuevo Item -->
-        <div class="card new-item-form">
-          <h3>➕ Agregar Nuevo Plato/Bebida</h3>
-          <form @submit.prevent="crearItem">
+        <div class="card form-card">
+          <div class="card-header">
+            <h3>➕ Nuevo Plato</h3>
+          </div>
+          <form @submit.prevent="crearItem" class="item-form">
             <div class="form-grid">
-              <input v-model="newItem.nombre" placeholder="Nombre del plato" required />
-              <input v-model="newItem.categoria" placeholder="Categoría (ej: Entradas)" required />
-              <input v-model.number="newItem.precio" type="number" step="0.01" placeholder="Precio" required />
-              <input v-model.number="newItem.tiempo_preparacion_min" type="number" placeholder="Tiempo (min)" />
+              <div class="form-group">
+                <label>Nombre</label>
+                <input v-model="newItem.nombre" placeholder="Ej: Hamburguesa Doble" required />
+              </div>
+              <div class="form-group">
+                <label>Categoría</label>
+                <input v-model="newItem.categoria" placeholder="Ej: Platos Fuertes" required />
+              </div>
+              <div class="form-group">
+                <label>Precio ($)</label>
+                <input v-model.number="newItem.precio" type="number" step="0.01" placeholder="0.00" required />
+              </div>
+              <div class="form-group">
+                <label>Tiempo (min)</label>
+                <input v-model.number="newItem.tiempo_preparacion_min" type="number" placeholder="15" />
+              </div>
             </div>
-            <textarea v-model="newItem.descripcion" placeholder="Descripción (ingredientes, notas...)"></textarea>
             
-            <div class="inventory-controls">
-              <label class="checkbox-label">
+            <div class="form-group">
+              <label>Descripción</label>
+              <textarea v-model="newItem.descripcion" placeholder="Ingredientes, alérgenos..." rows="2"></textarea>
+            </div>
+            
+            <div class="options-grid">
+              <label class="checkbox-card">
                 <input type="checkbox" v-model="newItem.usa_inventario" />
-                📦 Usar control de inventario
+                <span>📦 Control Stock</span>
               </label>
-              
-              <div v-if="newItem.usa_inventario" class="inventory-fields">
-                <div class="form-row">
-                  <div class="form-field">
-                    <label>Stock Actual:</label>
-                    <input v-model.number="newItem.stock_actual" type="number" min="0" placeholder="0" />
-                  </div>
-                  <div class="form-field">
-                    <label>Stock Mínimo:</label>
-                    <input v-model.number="newItem.stock_minimo" type="number" min="0" placeholder="5" />
-                  </div>
+              <label class="checkbox-card highlight">
+                <input type="checkbox" v-model="newItem.es_directo" />
+                <span>🍹 Servir Directo</span>
+              </label>
+            </div>
+
+            <!-- Campos de Inventario (Condicional) -->
+            <div v-if="newItem.usa_inventario" class="inventory-subform">
+              <div class="form-grid small-grid">
+                <div class="form-group">
+                  <label>Stock Actual</label>
+                  <input v-model.number="newItem.stock_actual" type="number" min="0" />
+                </div>
+                <div class="form-group">
+                  <label>Stock Mínimo</label>
+                  <input v-model.number="newItem.stock_minimo" type="number" min="0" />
                 </div>
               </div>
             </div>
             
-            <button type="submit" class="btn-add" :disabled="loading">Agregar Item</button>
+            <button type="submit" class="btn-submit" :disabled="loading">
+              {{ loading ? 'Guardando...' : '✨ Agregar Item' }}
+            </button>
           </form>
         </div>
 
-        <!-- Lista de Items por Categoría -->
-        <div v-for="(items, categoria) in menuPorCategoria" :key="categoria" class="category-section">
-          <h3 class="category-title">{{ categoria }}</h3>
-          <div class="items-grid">
-            <div v-for="item in items" :key="item.id" class="item-card">
-              <div class="item-header">
-                <input v-model="item.nombre" class="edit-input name" @change="actualizarItem(item)" />
-                <span v-if="item.estado_inventario" :class="['inventory-badge', `badge-${item.estado_inventario}`]">
-                  {{ getBadgeText(item.estado_inventario) }}
-                </span>
-                <button @click="eliminarItem(item.id)" class="btn-delete" title="Eliminar">🗑️</button>
-              </div>
-              <div class="item-body">
-                <textarea v-model="item.descripcion" class="edit-input desc" @change="actualizarItem(item)" placeholder="Descripción..."></textarea>
-                <div class="item-meta">
-                  <label>Precio: $
-                    <input v-model.number="item.precio" type="number" step="0.01" class="edit-input price" @change="actualizarItem(item)" />
-                  </label>
-                  <label>Tiempo:
-                    <input v-model.number="item.tiempo_preparacion_min" type="number" class="edit-input price" @change="actualizarItem(item)" /> min
-                  </label>
+        <!-- Lista de Items -->
+        <div class="menu-list">
+          <div v-for="(items, categoria) in menuPorCategoria" :key="categoria" class="category-group">
+            <h3 class="category-title">{{ categoria }} <span class="count">{{ items.length }}</span></h3>
+            <div class="items-grid">
+              <div v-for="item in items" :key="item.id" class="item-card">
+                <div class="item-card-header">
+                  <input v-model="item.nombre" class="edit-input title-input" @change="actualizarItem(item)" />
+                  <button @click="eliminarItem(item.id)" class="btn-icon delete" title="Eliminar">🗑️</button>
                 </div>
                 
-                <div class="inventory-section">
-                  <label class="checkbox-label">
-                    <input type="checkbox" v-model="item.usa_inventario" @change="actualizarItem(item)" />
-                    📦 Control de inventario
-                  </label>
+                <div class="item-card-body">
+                  <textarea v-model="item.descripcion" class="edit-input desc-input" @change="actualizarItem(item)" rows="2"></textarea>
                   
-                  <div v-if="item.usa_inventario" class="inventory-controls-edit">
-                    <div class="stock-row">
-                      <label>Stock:
-                        <input v-model.number="item.stock_actual" type="number" min="0" class="edit-input stock" @change="actualizarItem(item)" />
-                      </label>
-                      <label>Mínimo:
-                        <input v-model.number="item.stock_minimo" type="number" min="0" class="edit-input stock" @change="actualizarItem(item)" />
-                      </label>
+                  <div class="price-time-row">
+                    <div class="input-wrapper symbol">
+                      <input v-model.number="item.precio" type="number" class="edit-input" @change="actualizarItem(item)" />
                     </div>
+                    <div class="input-wrapper suffix">
+                      <input v-model.number="item.tiempo_preparacion_min" type="number" class="edit-input" @change="actualizarItem(item)" />
+                    </div>
+                  </div>
+
+                  <!-- Badges y Checkbox Rápidos -->
+                  <div class="badges-row">
+                    <label class="badge-checkbox" :class="{ active: item.es_directo }">
+                      <input type="checkbox" v-model="item.es_directo" @change="actualizarItem(item)" />
+                      🍹 Directo
+                    </label>
                     
-                    <div class="estado-row">
-                      <label>Estado:</label>
-                      <select v-model="item.estado_inventario" class="edit-input" @change="actualizarItem(item)">
-                        <option value="disponible">✅ Disponible</option>
-                        <option value="poco_stock">⚠️ Poco Stock</option>
-                        <option value="no_disponible">❌ No Disponible</option>
-                      </select>
-                    </div>
+                    <label class="badge-checkbox" :class="{ active: item.usa_inventario }">
+                      <input type="checkbox" v-model="item.usa_inventario" @change="actualizarItem(item)" />
+                      📦 Stock
+                    </label>
+                  </div>
+
+                  <!-- Control de Stock Rápido -->
+                  <div v-if="item.usa_inventario" class="stock-control">
+                    <input v-model.number="item.stock_actual" type="number" class="stock-input" @change="actualizarItem(item)" placeholder="#" />
+                    <select v-model="item.estado_inventario" class="stock-select" @change="actualizarItem(item)">
+                      <option value="disponible">✅ Disp</option>
+                      <option value="poco_stock">⚠️ Bajo</option>
+                      <option value="no_disponible">❌ Agotado</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -125,86 +163,87 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- TAB: CONFIGURACIÓN -->
-    <div v-if="activeTab === 'config'" class="tab-content">
-      <div class="card config-form">
-        <h3>⚙️ Personalizar Menú Digital / PDF</h3>
-        
-        <div class="form-group">
-          <label>Nombre del Restaurante (Portada)</label>
-          <input v-model="config.nombre" placeholder="Ej: Restaurante Sierra Nevada" />
-        </div>
-        
-        <div class="form-group">
-          <label>Subtítulo / Slogan</label>
-          <input v-model="config.subtitulo" placeholder="Ej: La mejor comida de la ciudad" />
-        </div>
+      <!-- TAB: CONFIGURACIÓN -->
+      <div v-if="activeTab === 'config'" class="tab-content fade-in">
+        <div class="card config-card">
+          <div class="card-header">
+            <h3>⚙️ Ajustes Generales</h3>
+          </div>
+          <div class="form-group">
+            <label>Nombre Restaurante</label>
+            <input v-model="config.nombre" />
+          </div>
+          <div class="form-group">
+            <label>Slogan / Subtítulo</label>
+            <input v-model="config.subtitulo" />
+          </div>
+          
+          <div class="options-grid" style="margin-top: 16px;">
+             <label class="checkbox-card">
+                <input type="checkbox" v-model="config.ocultarTextoPortada" />
+                <span>Ocultar texto en portada</span>
+              </label>
+          </div>
 
-        <div class="form-group checkbox-group">
-          <label>
-            <input type="checkbox" v-model="config.ocultarTextoPortada" />
-            Ocultar texto en portada (Solo mostrar imagen)
-          </label>
-        </div>
+          <div class="form-group" style="margin-top: 16px;">
+             <label>Imagen Portada</label>
+             <input type="file" @change="e => procesarImagen(e, 'imagenPortada')" accept="image/*" />
+             <div v-if="config.imagenPortada" class="img-preview">
+                <img :src="config.imagenPortada" />
+                <button @click="config.imagenPortada = ''" class="btn-text-danger">Eliminar</button>
+             </div>
+          </div>
 
-        <div class="form-group">
-          <label>Imagen de Portada (Primera Página)</label>
-          <input type="file" @change="e => procesarImagen(e, 'imagenPortada')" accept="image/*" />
-          <div v-if="config.imagenPortada" class="img-preview">
-            <img :src="config.imagenPortada" alt="Vista previa portada" />
-            <button @click="config.imagenPortada = ''" class="btn-sm btn-danger">🗑️ Eliminar</button>
+          <div class="form-group">
+             <label>Fondo Menú</label>
+             <input type="file" @change="e => procesarImagen(e, 'imagenFondoMenu')" accept="image/*" />
+             <div v-if="config.imagenFondoMenu" class="img-preview">
+                <img :src="config.imagenFondoMenu" />
+                <button @click="config.imagenFondoMenu = ''" class="btn-text-danger">Eliminar</button>
+             </div>
+          </div>
+          
+          <button @click="guardarConfig" class="btn-submit" :disabled="guardando" style="margin-top: 24px;">
+            {{ guardando ? 'Guardando...' : '💾 Guardar Cambios' }}
+          </button>
+
+          <div class="qr-preview" style="margin-top: 32px; text-align: center;">
+             <h4>QR del Menú</h4>
+             <GeneradorQR :valor="urlMenuDinamica" :size="180" />
+             <p style="margin-top: 8px; font-size: 12px; color: #666;">{{ urlMenuDinamica }}</p>
           </div>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label>Imagen de Fondo del Menú (Listado)</label>
-          <input type="file" @change="e => procesarImagen(e, 'imagenFondoMenu')" accept="image/*" />
-          <div v-if="config.imagenFondoMenu" class="img-preview">
-            <img :src="config.imagenFondoMenu" alt="Vista previa fondo" />
-            <button @click="config.imagenFondoMenu = ''" class="btn-sm btn-danger">🗑️ Eliminar</button>
+      <!-- TAB: MESAS -->
+      <div v-if="activeTab === 'mesas'" class="tab-content fade-in">
+        <div class="card form-card">
+          <div class="card-header">
+            <h3>➕ Nueva Mesa</h3>
+          </div>
+          <form @submit.prevent="crearMesa" class="inline-form">
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr auto;">
+              <input v-model.number="newMesa.numero" type="number" placeholder="# Mesa" required />
+              <input v-model.number="newMesa.capacidad" type="number" placeholder="Capacidad" required />
+              <button type="submit" class="btn-submit small" style="width: auto;">Agregar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="mesas-grid">
+          <div v-for="mesa in mesas" :key="mesa.id" class="mesa-card">
+            <div class="mesa-number">Mesa {{ mesa.numero }}</div>
+            <div class="mesa-capacity">👤 {{ mesa.capacidad }} pers.</div>
+            <button @click="eliminarMesa(mesa.id)" class="btn-icon delete-mesa" title="Eliminar">✕</button>
           </div>
         </div>
-
-        <button @click="guardarConfig" class="btn-primary" :disabled="guardando">
-          {{ guardando ? '💾 Guardando...' : '💾 Guardar Configuración' }}
-        </button>
-        
-        <div class="qr-preview">
-          <h4>Código QR del Menú</h4>
-          <GeneradorQR :valor="urlMenu" :size="200" />
-          <p>Escanea este código para ver el menú digital.</p>
-          <a :href="urlMenu" target="_blank">{{ urlMenu }}</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: MESAS -->
-    <div v-if="activeTab === 'mesas'" class="tab-content no-print">
-      <div class="card new-mesa-form">
-        <h3>➕ Agregar Mesa</h3>
-        <form @submit.prevent="crearMesa" class="inline-form">
-          <input v-model.number="newMesa.numero" type="number" placeholder="Número de Mesa" required />
-          <input v-model.number="newMesa.capacidad" type="number" placeholder="Capacidad (personas)" required />
-          <button type="submit" class="btn-add" :disabled="loading">Agregar Mesa</button>
-        </form>
       </div>
 
-      <div class="mesas-grid">
-        <div v-for="mesa in mesas" :key="mesa.id" class="mesa-card">
-          <div class="mesa-icon">🪑</div>
-          <div class="mesa-info">
-            <h4>Mesa {{ mesa.numero }}</h4>
-            <p>Capacidad: {{ mesa.capacidad }} pers.</p>
-            <span :class="['status', mesa.estado]">{{ mesa.estado }}</span>
-          </div>
-          <button @click="eliminarMesa(mesa.id)" class="btn-delete-mesa">Eliminar</button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
@@ -215,7 +254,11 @@ const emit = defineEmits(['volver']);
 
 const activeTab = ref('menu');
 const loading = ref(false);
-const urlMenu = ref("https://restaurante-pedidos.vercel.app/menu");
+// ✅ URL DINÁMICA: Detecta si es localhost o vercel
+const urlMenuDinamica = computed(() => {
+  const origen = window.location.origin;
+  return `${origen}/menu`; 
+});
 
 
 
@@ -230,7 +273,8 @@ const newItem = ref({
   usa_inventario: false,
   stock_actual: null,
   stock_minimo: 5,
-  estado_inventario: 'disponible'
+  estado_inventario: 'disponible',
+  es_directo: false // ✅ AÑADIR ESTA LÍNEA
 });
 
 // Estado Configuración
@@ -418,354 +462,4 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.editor-panel {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-}
-
-.tab-btn {
-  padding: 10px 20px;
-  border: none;
-  background: #e5e7eb;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #374151;
-  transition: all 0.2s;
-}
-
-.tab-btn.active {
-  background: #6366f1;
-  color: white;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.btn-volver {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-/* ESTILOS MENÚ EDITOR */
-.menu-controls {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  margin-bottom: 24px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-input, textarea {
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  width: 100%;
-  font-family: inherit;
-}
-
-.btn-add {
-  background: #10b981;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.category-section {
-  margin-bottom: 32px;
-}
-
-.category-title {
-  font-size: 20px;
-  color: #4b5563;
-  border-bottom: 2px solid #e5e7eb;
-  padding-bottom: 8px;
-  margin-bottom: 16px;
-}
-
-.items-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.item-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  transition: shadow 0.2s;
-}
-
-.item-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.item-header {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.edit-input {
-  border: 1px solid transparent;
-  background: #f9fafb;
-  padding: 4px 8px;
-}
-
-.edit-input:focus {
-  border-color: #6366f1;
-  background: white;
-}
-
-.edit-input.name {
-  font-weight: 700;
-  font-size: 16px;
-  flex: 1;
-}
-
-.edit-input.desc {
-  font-size: 14px;
-  color: #666;
-  resize: vertical;
-  min-height: 40px;
-  margin-bottom: 8px;
-}
-
-.item-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-}
-
-.edit-input.price {
-  width: 80px;
-  text-align: right;
-}
-
-.btn-delete {
-  background: #fee2e2;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 4px 8px;
-}
-
-/* ESTILOS INVENTARIO */
-.inventory-controls {
-  margin: 16px 0;
-  padding: 16px;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 12px;
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: auto;
-  cursor: pointer;
-}
-
-.inventory-fields {
-  margin-top: 12px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.form-field label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.inventory-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.inventory-controls-edit {
-  margin-top: 8px;
-  padding: 12px;
-  background: #f3f4f6;
-  border-radius: 6px;
-}
-
-.stock-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.stock-row label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-
-.edit-input.stock {
-  width: 70px;
-}
-
-.estado-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.estado-row label {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.estado-row select {
-  flex: 1;
-  padding: 6px;
-  border-radius: 4px;
-}
-
-.inventory-badge {
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.badge-disponible {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge-poco_stock {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.badge-no_disponible {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-/* ESTILOS MESAS */
-.inline-form {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.mesas-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 16px;
-}
-
-.mesa-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  border: 2px solid #e5e7eb;
-  position: relative;
-}
-
-.mesa-icon { font-size: 32px; margin-bottom: 8px; }
-.btn-delete-mesa {
-  margin-top: 12px;
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 4px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-.img-preview img {
-  max-width: 100%;   /* Que la imagen no sobrepase el ancho del contenedor */
-  max-height: 200px; /* O el tamaño máximo que consideres adecuado */
-  object-fit: contain; /* Para que la imagen mantenga proporción y no se distorsione */
-  border-radius: 8px; /* Opcional, para estética */
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Opcional */
-}
-/* ESTILOS VISTA PREVIA / IMPRESIÓN */
-.preview-view {
-  background: white;
-  padding: 40px;
-  max-width: 800px;
-  margin: 0 auto;
-  box-shadow: 0 0 20px rgba(0,0,0,0.1);
-}
-
-.menu-header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }
-.menu-header h1 { font-size: 36px; margin: 0; letter-spacing: 2px; }
-.menu-category h2 { text-align: center; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 20px; }
-.menu-list-item { display: flex; justify-content: space-between; margin-bottom: 16px; }
-.item-info { display: flex; flex-direction: column; }
-.item-name { font-weight: 700; font-size: 18px; }
-.item-desc { font-size: 14px; color: #666; font-style: italic; }
-.item-price { font-weight: 700; font-size: 18px; }
-
-.menu-footer { margin-top: 60px; text-align: center; border-top: 1px solid #ccc; padding-top: 20px; }
-.qr-section { margin-top: 20px; display: flex; flex-direction: column; align-items: center; }
-
-@media print {
-  .no-print { display: none !important; }
-  .editor-panel { padding: 0; margin: 0; max-width: none; }
-  .preview-view { box-shadow: none; padding: 0; }
-  body { background: white; }
-}
-</style>
+<style src="../assets/styles/EditorPanel.css" scoped></style>

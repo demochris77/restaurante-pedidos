@@ -158,6 +158,21 @@ export function useNotificaciones(rol) {
             });
         }
         else if (rol === 'mesero') {
+            // ✅ AGREGAR ESTO: Listener para solicitud de cuenta
+            socket.on('solicitar_cuenta', (data) => {
+                // Obtener usuario actual del localStorage (o store si prefieres)
+                const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+
+                // Verificar si la solicitud es para este mesero
+                if (usuario.id && String(data.mesero_id) === String(usuario.id)) {
+                    mostrarNotificacion(
+                        `cuenta-${data.pedido_id}`, // ID único
+                        `💳 Mesa ${data.mesa_numero}: Solicitan la cuenta`, // Mensaje
+                        'pago' // Tipo (usamos 'pago' para que salga con icono de dinero)
+                    );
+                }
+            });
+
             socket.on('item_ready', (data) => {
                 const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
                 if (usuario.id && String(data.mesero_id) === String(usuario.id)) {
@@ -207,6 +222,7 @@ export function useNotificaciones(rol) {
         socket.off('nuevo_pedido');
         socket.off('pedido_actualizado');
         socket.off('item_completed'); // New listener to turn off
+        socket.off('solicitar_cuenta'); // ✅ AGREGAR ESTO
         if (intervalo) clearInterval(intervalo);
     });
 

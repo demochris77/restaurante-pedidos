@@ -30,8 +30,12 @@
         <div class="status-text">
           <h2>{{ getEstadoTexto(pedido.estado) }}</h2>
           <p>{{ getEstadoDescripcion(pedido.estado) }}</p>
-          <div v-if="pedido.tiempoTranscurrido !== undefined" class="timer-badge">
+          <div v-if="pedido.estado === 'en_cocina' || pedido.estado === 'listo'" class="timer-badge">
             ⏱️ {{ getTiempoTranscurrido(pedido.tiempoTranscurrido) }}
+          </div>
+          <!-- Opcional: Mostrar cuánto tardó si ya se sirvió -->
+          <div v-else-if="pedido.estado === 'servido'" class="timer-badge success">
+            🏁 Tardó {{ pedido.tiempoTranscurrido }} min
           </div>
         </div>
       </div>

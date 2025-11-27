@@ -50,6 +50,26 @@
           </div>
         </div>
 
+        <!-- BARRA DE FILTROS -->
+        <div class="section filters-section">
+          <h3>📅 Filtros de Reporte</h3>
+          <div class="filters-row">
+            <div class="filter-group">
+              <label>Desde:</label>
+              <input type="date" v-model="filtroFechaInicio" class="input-date" />
+            </div>
+            <div class="filter-group">
+              <label>Hasta:</label>
+              <input type="date" v-model="filtroFechaFin" class="input-date" />
+            </div>
+            <button @click="aplicarFiltros" class="btn btn-primary">
+              🔎 Aplicar Filtros
+            </button>
+            <button @click="limpiarFiltros" class="btn btn-secondary">
+              🧹 Limpiar
+            </button>
+          </div>
+        </div>
         <!-- Desglose por Método de Pago -->
         <div class="section">
           <h3>💳 Métodos de Pago</h3>
@@ -154,11 +174,6 @@
         <!-- Tiempos de Cocina -->
         <div class="section">
           <h3>⏱️ Tiempos de Cocina</h3>
-          <div class="filters-row">
-            <input type="date" v-model="filtroFechaInicio" class="input-date" />
-            <input type="date" v-model="filtroFechaFin" class="input-date" />
-            <button @click="cargarTiemposCocina" class="btn btn-secondary">Filtrar</button>
-          </div>
           
           <div v-if="loadingTiempos" class="loading-small">Cargando estadísticas...</div>
           
@@ -199,7 +214,6 @@
             No hay estadísticas de tiempos para el período seleccionado
           </div>
         </div>
-
         <!-- Top Platos Más Pedidos -->
         <div class="section">
           <h3>🏆 Top Platos Más Pedidos</h3>
@@ -359,6 +373,11 @@ const itemsAgrupados = computed(() => {
   
   return Object.values(grupos);
 });
+const limpiarFiltros = () => {
+    filtroFechaInicio.value = '';
+    filtroFechaFin.value = '';
+    aplicarFiltros(); // Recarga todo sin filtros (histórico completo)
+};
 
 const cargarReportes = async () => {
   loading.value = true;
@@ -434,10 +453,17 @@ const getDiferenciaClass = (diferencia) => {
 };
 
 // Cargar top platos
+// Modificar esta función existente
 const cargarTopPlatos = async () => {
   loadingTopPlatos.value = true;
   try {
-    const response = await api.getTopPlatos(10);
+    const params = {};
+    // Usamos las mismas variables de filtro que ya tienes
+    if (filtroFechaInicio.value) params.fecha_inicio = filtroFechaInicio.value;
+    if (filtroFechaFin.value) params.fecha_fin = filtroFechaFin.value;
+
+    // Pasamos params a la api
+    const response = await api.getTopPlatos(10, params);
     topPlatos.value = response.data;
   } catch (err) {
     console.error('Error cargando top platos:', err);
@@ -445,6 +471,13 @@ const cargarTopPlatos = async () => {
     loadingTopPlatos.value = false;
   }
 };
+
+// Modificar el botón de filtrar para que actualice AMBAS tablas
+const aplicarFiltros = () => {
+    cargarTiemposCocina();
+    cargarTopPlatos();
+};
+
 
 // ================= REAL-TIME =================
 const setupRealTime = () => {
@@ -504,356 +537,4 @@ onUnmounted(() => {
     socket.off('pedido_pagado');
 });
 </script>
-
-<style scoped>
-.admin-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  color: white;
-  border-radius: 8px;
-}
-
-.section {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.section h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
-}
-
-.stat-card {
-  border: 2px solid var(--color-border);
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-}
-
-.stat-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-primary);
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-}
-
-.metodos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.metodo-card {
-  border: 2px solid var(--color-border);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--color-bg);
-}
-
-.metodo-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.metodo-nombre {
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.metodo-cantidad {
-  font-size: 12px;
-  color: #999;
-}
-
-.metodo-total {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--color-success);
-}
-
-.tabla-pedidos {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background: var(--color-bg);
-}
-
-th {
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
-  border-bottom: 2px solid var(--color-border);
-  font-size: 14px;
-}
-
-td {
-  padding: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-tr:hover {
-  background: var(--color-bg);
-}
-
-.estado-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.estado-nuevo {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.estado-pagado {
-  background: #bbf7d0;
-  color: #065f46;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #999;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metodos-grid {
-    grid-template-columns: 1fr;
-  }
-
-  table {
-    font-size: 12px;
-  }
-
-  th, td {
-    padding: 8px;
-  }
-}
-
-.total-acumulado {
-  margin-bottom: 24px;
-}
-
-.total-card {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  color: white;
-  padding: 24px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.total-label {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-bottom: 8px;
-}
-
-.total-value {
-  font-size: 36px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.total-subtitle {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.tabla-historico {
-  overflow-x: auto;
-}
-
-.total-dia {
-  font-weight: 700;
-  color: var(--color-success);
-}
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-.modal-detalle {
-  background: white;
-  border-radius: 12px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 2px solid #f3f4f6;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.btn-cerrar {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-  transition: color 0.2s;
-}
-
-.btn-cerrar:hover {
-  color: #000;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.detalle-info {
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.detalle-items {
-  margin-bottom: 20px;
-}
-
-.detalle-items h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-}
-
-.items-tabla {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.item-row {
-  display: grid;
-  grid-template-columns: 60px 1fr 80px 80px;
-  gap: 12px;
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.item-row:last-child {
-  border-bottom: none;
-}
-
-.item-row.header-row {
-  background: #f3f4f6;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.item-row span:nth-child(1) {
-  text-align: center;
-}
-
-.item-row span:nth-child(3),
-.item-row span:nth-child(4) {
-  text-align: right;
-}
-
-.detalle-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.btn-info {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.btn-info:hover {
-  background: #2563eb;
-}
-</style>
+<style src="../assets/styles/AdminPanel.css" scoped></style>

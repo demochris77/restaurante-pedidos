@@ -136,8 +136,11 @@ export default {
     return api.get('/reportes/tiempos-cocina', { params });
   },
 
-  getTopPlatos(limit = 10) {
-    return api.get(`/reportes/top-platos?limit=${limit}`);
+  // En tu archivo api.js
+  getTopPlatos: (limit = 10, params = {}) => {
+    return axios.get(`/api/reportes/top-platos`, {
+      params: { limit, ...params }
+    });
   },
 
   // ============= PÚBLICO (Sin autenticación) =============
