@@ -468,6 +468,7 @@ const cargarTopPlatos = async () => {
     // Pasamos params a la api
     const response = await api.getTopPlatos(10, params);
     topPlatos.value = response.data;
+    console.log(topPlatos.value)
   } catch (err) {
     console.error('Error cargando top platos:', err);
   } finally {
