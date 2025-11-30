@@ -137,11 +137,13 @@ export default {
   },
 
   // En tu archivo api.js
+  // ✅ CORRECCIÓN: Usar api.get()
   getTopPlatos: (limit = 10, params = {}) => {
-    return axios.get(`/api/reportes/top-platos`, {
+    return api.get('/reportes/top-platos', {
       params: { limit, ...params }
     });
   },
+
 
   // ============= PÚBLICO (Sin autenticación) =============
   getPedidoStatusPublico(id) {
