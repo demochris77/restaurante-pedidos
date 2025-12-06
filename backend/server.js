@@ -81,16 +81,12 @@ async function initDatabase() {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS pedidos (
                 id TEXT PRIMARY KEY,
-                mesa_numero INTEGER NOT NULL,
-                usuario_mesero_id TEXT,
-                total NUMERIC(10,2) NOT NULL,
-                estado TEXT DEFAULT 'nuevo' CHECK(estado IN ('nuevo', 'en_cocina', 'listo', 'servido', 'listo_pagar', 'en_caja', 'pagado', 'cancelado')),
-                notas TEXT,
+                mesa_id TEXT NOT NULL,
+                usuario_facturero_id TEXT,
+                estado TEXT DEFAULT 'pendiente' CHECK(estado IN ('pendiente', 'en_preparacion', 'listo', 'servido')),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                started_at TIMESTAMP,
-                delivered_at TIMESTAMP,
-                completed_at TIMESTAMP,
-                FOREIGN KEY (usuario_mesero_id) REFERENCES usuarios(id)
+                FOREIGN KEY (mesa_id) REFERENCES mesas(id),
+                FOREIGN KEY (usuario_facturero_id) REFERENCES usuarios(id)
             )
         `);
 
@@ -165,7 +161,7 @@ app.use('/api/users', usuariosRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/mesas', mesasRoutes);
 app.use('/api/pedidos', pedidosRoutes);
-app.use('/api/pedido-items', pedidosRoutes); // Items usan el mismo router
+app.use('/api/pedido-items', pedido_itemsRoutes); // Items usan el mismo router
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/transacciones', transaccionesRoutes);
 
