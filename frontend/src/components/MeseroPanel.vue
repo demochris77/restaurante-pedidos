@@ -191,6 +191,13 @@
                 >
                   ✏️ Editar
                 </button>
+                <button 
+                  v-if="['nuevo'].includes(pedido.estado)"
+                  @click="cancelarPedido(pedido.id)"
+                  class="btn btn-secondary btn-small"
+                >
+                  ❌ Cancelar
+                </button>
                 <button @click="mostrarQRCliente(pedido.id)" class="btn btn-secondary btn-small">
                   📱 QR
                 </button>
@@ -371,7 +378,8 @@ const itemsPorCategoria = computed(() => {
 
 const misPedidos = computed(() => {
   if (!usuarioStore.usuario?.id) return [];
-  return pedidoStore.pedidos.filter(p => String(p.usuario_mesero_id) === String(usuarioStore.usuario.id));
+  return pedidoStore.pedidos.filter(p => String(p.usuario_mesero_id) === String(usuarioStore.usuario.id)  &&
+    p.estado !== 'cancelado');
 });
 
 const misItemsListos = computed(() => {
@@ -521,6 +529,22 @@ const marcarComoServido = async (pedidoId) => {
     alert('✅ Pedido marcado como servido');
   } catch (err) {
     alert('❌ Error al marcar como servido');
+  }
+};
+const cancelarPedido = async (pedidoId) => {
+  const confirmado = confirm(
+    '⚠️ ¿Seguro que quieres cancelar este pedido?\n' +
+    'No se eliminarán los datos, pero dejará de estar activo.'
+  );
+  if (!confirmado) return;
+
+  try {
+    await pedidoStore.actualizarEstadoPedido(pedidoId, 'cancelado');
+    await pedidoStore.cargarPedidosActivos();
+    alert('✅ Pedido cancelado');
+  } catch (err) {
+    console.error(err);
+    alert('❌ Error al cancelar pedido');
   }
 };
 
