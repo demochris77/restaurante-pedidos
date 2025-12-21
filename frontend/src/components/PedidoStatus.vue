@@ -129,8 +129,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import api from '../api';
 import socket from '../socket';
-import { verCuentaEnVentana } from '../utils/ticketViewer';
-
+  
 // Detectar tipo de ruta y extraer ID
 const path = window.location.pathname;
 const pathParts = path.split('/');
@@ -222,45 +221,12 @@ const getTiempoTranscurrido = (tiempoMinutos) => {
   return `${tiempoMinutos} min`;
 };
 
-  const verCuenta = async () => {
-  try {
-    // Si la vista se abrió por mesa (/mesa/:numero),
-    // ya tienes el pedido completo en `pedido.value` y sus items en `items.value`.
-    // Si quieres asegurarte, podrías volver a pedirlo por ID:
-    // const res = await api.getPedido(pedido.value.id);
-    // const pedidoCompleto = res.data;
-
-    const pedidoActual = pedido.value;
-    const itemsPedido = items.value || [];
-
-    // Agrupar items igual que en CajaPanel
-    const itemsAgrupados = {};
-    itemsPedido.forEach(item => {
-      const key = item.menu_item_id || item.nombre;
-      if (!itemsAgrupados[key]) {
-        itemsAgrupados[key] = {
-          nombre: item.nombre,
-          precio: Number(item.precio_unitario || item.precio || 0),
-          cantidad: 0,
-        };
-      }
-      itemsAgrupados[key].cantidad += (item.cantidad || 1);
-    });
-
-    const ticketData = {
-      mesa: pedidoActual.mesa_numero,
-      total: pedidoActual.total,
-      items: Object.values(itemsAgrupados),
-      cajero: '',        // aquí no necesitas cajero
-      metodoPago: null,  // es solo vista de cuenta
-      tipo: 'cuenta',
-    };
-
-    verCuentaEnVentana(ticketData);
-  } catch (err) {
-    console.error('Error generando cuenta en vista pública:', err);
-    alert('❌ No se pudo mostrar la cuenta');
-  }
+const verCuenta = () => {
+  if (!pedido.value) return;
+  const baseUrl = window.location.origin;
+  // Ruta que definiste en el router para CuentaView.vue
+  const url = `${baseUrl}/cuenta/${pedido.value.id}`;
+  window.open(url, '_blank');
 };
 
 // ✅ MODIFICAR: getItemProgress igual
