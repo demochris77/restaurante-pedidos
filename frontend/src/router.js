@@ -10,7 +10,7 @@ const routes = [
   { path: '/pedido/:id/status', component: PedidoStatus },
   { path: '/mesa/:id', component: PedidoStatus },
   { path: '/mesas-qr', name: 'mesas-qr', component: MesasQR },
-  { path: '/cuenta/:id', name: 'cuenta', component: CuenvaView },
+  { path: '/cuenta/:id', name: 'cuenta', component: CuentaView },
 }
 
 ];
