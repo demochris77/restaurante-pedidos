@@ -68,9 +68,15 @@ const itemsAgrupados = computed(() => {
 
 onMounted(async () => {
   const pedidoId = route.params.id;
-  const res = await api.getPedido(pedidoId);
-  pedido.value = res.data;
-  items.value = res.data.items || [];
+
+  try {
+    // ✅ Usar el endpoint público, igual que PedidoStatus
+    const res = await api.getPedidoStatusPublico(pedidoId);
+    pedido.value = res.data.pedido;
+    items.value = res.data.items || [];
+  } catch (err) {
+    console.error('Error cargando pedido para cuenta:', err);
+  }
 });
 </script>
 
