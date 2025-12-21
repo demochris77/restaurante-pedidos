@@ -97,17 +97,19 @@
             <div v-if="montoRecibido && montoRecibido > pedidoSeleccionado.total" class="cambio">
               💵 Cambio: ${{ (montoRecibido - pedidoSeleccionado.total).toFixed(2) }}
             </div>
-            <div v-if="montoRecibido && montoRecibido < pedidoSeleccionado.total" class="alerta">
-              ⚠️ Monto insuficiente
+             <div v-if="montoRecibido && montoRecibido < pedidoSeleccionado.total" class="alerta">
+              🔹 Pago parcial, quedará saldo pendiente.
             </div>
+
           </div>
 
           <div class="botones-pago">
-            <button
-              @click="procesarPago"
-              class="btn btn-success btn-full"
-              :disabled="!metodoSeleccionado || (metodoSeleccionado === 'efectivo' && (!montoRecibido || montoRecibido < pedidoSeleccionado.total))"
-            >
+           <button
+            @click="procesarPago"
+            class="btn btn-success btn-full"
+            :disabled="!metodoSeleccionado || (metodoSeleccionado === 'efectivo' && (!montoRecibido || montoRecibido <= 0))"
+          >
+
               ✅ Confirmar Pago
             </button>
             <button
@@ -435,24 +437,50 @@ const pedirCuenta = async (pedido) => {
 };
 
 const procesarPago = async () => {
-  if (!pedidoSeleccionado.value) return;
-  
+  if (!pedidoSeleccionado.value || !metodoSeleccionado.value) return;
+
+  // Monto que se va a registrar en esta transacción
+  let monto = 0;
+
+  if (metodoSeleccionado.value === 'efectivo') {
+    if (!montoRecibido.value || montoRecibido.value <= 0) {
+      alert('Ingresa un monto válido en efectivo');
+      return;
+    }
+    monto = Number(montoRecibido.value);
+  } else {
+    // Por ahora: para Nequi / tarjeta / otro_digital registras el total pendiente
+    // Más abajo calculamos pendiente a partir de pagos previos (cuando expongas pagos)
+    monto = Number(pedidoSeleccionado.value.total);
+  }
+
   try {
-    await api.registrarPago(
+    const res = await api.registrarPago(
       pedidoSeleccionado.value.id,
       usuarioStore.usuario.id,
-      pedidoSeleccionado.value.total,
+      monto,
       metodoSeleccionado.value
     );
-    
-    // Preparar datos
-    prepararTicket(pedidoSeleccionado.value, 'pago', metodoSeleccionado.value);
-    
-    alert('✅ Pago registrado con éxito');
-    // Imprimir
+
+    // res.data trae: total_pagado, total_pedido, pendiente, nuevo_estado
+    const { total_pagado, total_pedido, pendiente } = res.data;
+
+    // Preparar ticket con el monto que se pagó en ESTA transacción
+    prepararTicket(
+      { ...pedidoSeleccionado.value, total: monto },
+      'pago',
+      metodoSeleccionado.value
+    );
+
+    alert(
+      `✅ Pago registrado.\n` +
+      `Pagado ahora: $${monto}\n` +
+      `Total pagado: $${total_pagado}\n` +
+      `Pendiente: $${pendiente}`
+    );
+
     imprimirContenido(ticketData.value);
 
-    
     cancelarPago();
     await actualizarPedidos();
   } catch (err) {
@@ -460,6 +488,7 @@ const procesarPago = async () => {
     alert('❌ Error al registrar pago');
   }
 };
+;
 
 const verDetallesPago = async (pedidoId) => {
   try {
