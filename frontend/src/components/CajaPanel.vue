@@ -306,14 +306,11 @@ const formatearHora = (fecha) => {
 };
 
 // ✅ FUNCIÓN CORREGIDA: Agrupa items para el ticket
-const prepararTicket = (pedido, tipo, metodo = null) => {
-  // Lógica de agrupación
+const prepararTicket = (pedido, tipo, metodo = null, extras = {}) => {
   const itemsAgrupadosParaTicket = {};
-  
+
   (pedido.items || []).forEach(item => {
-    // Usamos ID del menú o nombre como clave única
     const key = item.menu_item_id || item.nombre;
-    
     if (!itemsAgrupadosParaTicket[key]) {
       itemsAgrupadosParaTicket[key] = {
         nombre: item.nombre,
@@ -321,23 +318,24 @@ const prepararTicket = (pedido, tipo, metodo = null) => {
         cantidad: 0
       };
     }
-    
-    // Sumamos cantidad
     itemsAgrupadosParaTicket[key].cantidad += (item.cantidad || 1);
   });
 
-  // Convertir objeto agrupado a array
   const itemsFinales = Object.values(itemsAgrupadosParaTicket);
 
   ticketData.value = {
     tipo,
     mesa: pedido.mesa_numero,
-    total: pedido.total,
-    items: itemsFinales, // Usamos la lista agrupada
+    totalPedido: pedido.total,                 // total real del pedido
+    items: itemsFinales,
     cajero: usuarioStore.usuario.nombre,
-    metodoPago: metodo
+    metodoPago: metodo,
+    montoRecibido: extras.montoRecibido ?? null,
+    montoAplicado: extras.montoAplicado ?? null,
+    cambio: extras.cambio ?? null
   };
 };
+
 
 
 // ✅ FUNCIÓN CORREGIDA (Escapando etiquetas)
@@ -398,10 +396,23 @@ const imprimirContenido = (data) => {
         <div class="divider"></div>
         <div class="row">
           <span>TOTAL:</span>
-          <span>$${data.total}</span>
+          <span>$${data.totalPedido}</span>
         </div>
+        ${data.montoRecibido != null ? `
+          <div class="row">
+            <span>Recibido:</span>
+            <span>$${data.montoRecibido}</span>
+          </div>
+        ` : ''}
+        ${data.cambio != null ? `
+          <div class="row">
+            <span>Cambio:</span>
+            <span>$${data.cambio}</span>
+          </div>
+        ` : ''}
         <div class="divider"></div>
       </div>
+
 
       <div class="footer">
         <p>¡Gracias por su visita!</p>
@@ -443,39 +454,59 @@ const pedirCuenta = async (pedido) => {
 const procesarPago = async () => {
   if (!pedidoSeleccionado.value || !metodoSeleccionado.value) return;
 
-  let monto = 0;
+  const totalPedido = Number(pedidoSeleccionado.value.total);
+  const pendienteActual = saldoPendiente.value != null
+    ? Number(saldoPendiente.value)
+    : totalPedido;
+
+  let montoRecibidoEstaVez = 0;
+  let montoQueSeRegistra = 0;
 
   if (metodoSeleccionado.value === 'efectivo') {
     if (!montoRecibido.value || montoRecibido.value <= 0) {
       alert('Ingresa un monto válido en efectivo');
       return;
     }
-    monto = Number(montoRecibido.value);
+    montoRecibidoEstaVez = Number(montoRecibido.value);
+
+    // Lo que se registra en transacciones es el mínimo entre recibido y pendiente
+    montoQueSeRegistra = Math.min(montoRecibidoEstaVez, pendienteActual);
   } else {
-    // 👉 aquí usamos el saldo pendiente local
-    monto = Number(saldoPendiente.value ?? pedidoSeleccionado.value.total);
+    // Otros métodos pagan exactamente el saldo pendiente
+    montoRecibidoEstaVez = pendienteActual;
+    montoQueSeRegistra = pendienteActual;
   }
 
   try {
     const res = await api.registrarPago(
       pedidoSeleccionado.value.id,
       usuarioStore.usuario.id,
-      monto,
+      montoQueSeRegistra,
       metodoSeleccionado.value
     );
 
     const { total_pagado, total_pedido, pendiente } = res.data;
-    saldoPendiente.value = pendiente; // 🔁 actualizar saldo local
+    saldoPendiente.value = pendiente;
 
+    const cambio = metodoSeleccionado.value === 'efectivo'
+      ? Math.max(montoRecibidoEstaVez - montoQueSeRegistra, 0)
+      : 0;
+
+    // Ticket usa SIEMPRE el total del pedido, no lo sobreescribimos
     prepararTicket(
-      { ...pedidoSeleccionado.value, total: monto },
+      pedidoSeleccionado.value,
       'pago',
-      metodoSeleccionado.value
+      metodoSeleccionado.value,
+      {
+        montoRecibido: montoRecibidoEstaVez,
+        montoAplicado: montoQueSeRegistra,
+        cambio
+      }
     );
 
     alert(
       `✅ Pago registrado.\n` +
-      `Pagado ahora: $${monto}\n` +
+      `Pagado ahora: $${montoQueSeRegistra}\n` +
       `Total pagado: $${total_pagado}\n` +
       `Pendiente: $${pendiente}`
     );
@@ -486,13 +517,15 @@ const procesarPago = async () => {
       cancelarPago();
       await actualizarPedidos();
     } else {
-      // Sigue habiendo saldo, puedes dejar el formulario abierto para el siguiente método
+      // aún falta saldo
       metodoSeleccionado.value = '';
       montoRecibido.value = null;
     }
   } catch (err) {
     console.error(err);
-    alert('❌ Error al registrar pago');
+    const msg = err.response?.data?.error || 'Error al registrar pago';
+    alert('❌ ' + msg);
+    await actualizarPedidos();
   }
 };
 
