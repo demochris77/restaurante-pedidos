@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import pool, { runAsync, getAsync, allAsync } from './config/db.js';
+import bcrypt from 'bcrypt'; // ✅ NUEVO
+import { v4 as uuidv4 } from 'uuid'; // ✅ NUEVO
 
 // Importar rutas
 import authRoutes from './routes/auth.js';
@@ -189,6 +191,22 @@ async function initDatabase() {
 
         for (const conf of defaultConfigs) {
             await pool.query(`INSERT INTO configuracion (clave, valor) VALUES ($1, $2) ON CONFLICT (clave) DO NOTHING`, [conf.k, conf.v]);
+        }
+
+        // 🔄 CREAR ADMIN POR DEFECTO SI NO EXISTE NINGUNO
+        try {
+            const usersCount = await pool.query('SELECT count(*) FROM usuarios');
+            if (parseInt(usersCount.rows[0].count) === 0) {
+                console.log('⚠️ No hay usuarios. Creando ADMIN por defecto...');
+                const hashedPassword = await bcrypt.hash('admin123', 10);
+                await pool.query(`
+                    INSERT INTO usuarios (id, username, password, nombre, rol)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [uuidv4(), 'admin', hashedPassword, 'Administrador Inicial', 'admin']);
+                console.log('✅ Usuario ADMIN creado: user=admin, pass=admin123');
+            }
+        } catch (err) {
+            console.error('Error creando admin por defecto:', err);
         }
 
         console.log('✓ Tablas inicializadas en Postgres');
