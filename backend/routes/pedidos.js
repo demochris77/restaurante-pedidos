@@ -29,12 +29,11 @@ async function actualizarEstadisticasTiempo(menuItemId, tiempoReal) {
                 tiempo_promedio_minutos = $2,
                 tiempo_minimo_minutos = $3,
                 tiempo_maximo_minutos = $4
-            WHERE menu_item_id = $1 AND fecha = ${localDateExpr}
+            WHERE menu_item_id = $5 AND fecha = ${localDateExpr}
         `, [nuevoTotal, nuevoPromedio, nuevoMin, nuevoMax, menuItemId]);
     } else {
         await runAsync(`
             INSERT INTO item_time_stats 
-            (menu_item_id, fecha, total_preparaciones, tiempo_promedio_minutos, tiempo_minimo_minutos, tiempo_maximo_minutos)
             (menu_item_id, fecha, total_preparaciones, tiempo_promedio_minutos, tiempo_minimo_minutos, tiempo_maximo_minutos)
             VALUES ($1, ${localDateExpr}, 1, $2, $3, $4)
         `, [menuItemId, tiempoReal, tiempoReal, tiempoReal]);

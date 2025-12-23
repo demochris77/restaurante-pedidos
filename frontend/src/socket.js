@@ -18,9 +18,28 @@ const getSocketUrl = () => {
 const socket = io(getSocketUrl(), {
     autoConnect: false,
     reconnection: true,
-    // ✅ AGREGAR ESTO:
-    transports: ['websocket'], // Evita polling y problemas de sesión en Render
-    withCredentials: true      // A veces necesario para CORS
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    // ✅ IMPORTANTE: Permitir ambos transports (polling primero para Render)
+    transports: ['polling', 'websocket'],
+    // ✅ Upgrade a WebSocket si está disponible
+    upgrade: true,
+    // Timeout más largo para conexiones lentas
+    timeout: 20000
+});
+
+// ✅ Logging para debugging
+socket.on('connect', () => {
+    console.log('✅ Socket conectado:', socket.id);
+});
+
+socket.on('disconnect', (reason) => {
+    console.log('❌ Socket desconectado:', reason);
+});
+
+socket.on('connect_error', (error) => {
+    console.error('❌ Error de conexión socket:', error.message);
 });
 
 export default socket;

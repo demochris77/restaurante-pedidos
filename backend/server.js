@@ -27,12 +27,21 @@ import configItemsRoutes from './routes/configItems.js'; // ✅ NUEVO
 const app = express();
 const httpServer = createServer(app);
 
-// Configurar Socket.IO
+// Configurar Socket.IO con opciones para producción
 const io = new Server(httpServer, {
     cors: {
-        origin: '*',
-        methods: ['GET', 'POST', 'PUT', 'DELETE']
-    }
+        origin: process.env.FRONTEND_URL || '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        credentials: true
+    },
+    // ✅ CRÍTICO PARA RENDER: Permitir ambos transports
+    transports: ['polling', 'websocket'],
+    // ✅ Configuraciones adicionales para producción
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 30000,
+    allowUpgrades: true,
+    perMessageDeflate: false
 });
 
 // Hacer io accesible en las rutas
