@@ -11,7 +11,7 @@ const getSocketUrl = () => {
     if (isLocal) {
         return `http://${hostname}:3000`;
     } else {
-        return import.meta.env.VITE_API_URL || 'https://restaurante-pedidos-backend.onrender.com';
+        return import.meta.env.VITE_SOCKET_URL || 'https://restaurante-pedidos-backend.onrender.com';
     }
 };
 
