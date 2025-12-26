@@ -58,9 +58,11 @@
         "listo": "Ready",
         "servido": "Served",
         "pagado": "Paid",
-        "listo_pagar": "Ready verify",
+        "listo_pagar": "Ready to Pay",
         "en_caja": "At Cashier",
-        "cancelado": "Cancelled"
+        "cancelado": "Cancelled",
+        "pendiente": "Pending",
+        "en_preparacion": "In Preparation"
     },
     "kitchen": {
         "title": "Kitchen Panel",
@@ -203,6 +205,7 @@
         "cancel": "❌ Cancel",
         "qr": "📱 QR",
         "notes_placeholder": "Special notes (e.g. No spicy, no tomato...)",
+        "item_notes_placeholder": "Notes for kitchen (e.g. No onions, well done...)",
         "total": "Total:",
         "scan_status": "📱 Scan to see status",
         "edit_order_title": "✏️ Edit Order - Table",
@@ -219,7 +222,14 @@
         "confirm_cancel": "⚠️ Are you sure you want to cancel this order?\nData will not be deleted, but it will stop being active.",
         "alert_cancelled": "✅ Order cancelled",
         "item_added": "✅ \"{name}\" removed from order",
-        "ready_since": "Ready since"
+        "ready_since": "Ready since",
+        "alert_items_added": "✅ Items added to order",
+        "search_dishes": "Search dishes...",
+        "confirm_send_order": "Confirm sending order to kitchen?",
+        "confirm_add_items": "Confirm adding these items to the order?",
+        "view_bill": "View Bill",
+        "back_to_panel": "Back to Panel",
+        "back_to_order_status": "Back to Status"
     },
     "cashier": {
         "title": "💰 Cashier Panel",
@@ -257,7 +267,10 @@
         "single_payment": "Single Payment",
         "multiple_payment": "Multiple Payment",
         "alert_payment_registered": "✅ Payment registered.",
-        "alert_error_payment": "❌ Error registering payment"
+        "alert_error_payment": "❌ Error registering payment",
+        "confirm_payment_prompt": "Confirm payment? This action cannot be undone.",
+        "print_bill": "Print Bill",
+        "view_bill_online": "View Bill"
     },
     "admin": {
         "title": "Admin Panel",

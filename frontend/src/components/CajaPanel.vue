@@ -35,18 +35,22 @@
                 {{ pedido.items_count }} items
               </div>
               
-              <div class="botones-pedido">
-                <button
-                  @click="pedirCuenta(pedido)"
-                  class="btn btn-sm btn-secondary"
-                  title="Imprimir cuenta para el cliente"
+              <div class="pedido-botones">
+                <button 
+                  @click="verCuentaOnline(pedido.id)" 
+                  class="btn btn-sm btn-info"
                 >
-                  {{ $t('cashier.bill') }}
+                  👁️ {{ $t('cashier.view_bill_online') }}
                 </button>
-                <button
-                  @click="seleccionarPedido(pedido)"
+                <button 
+                  @click="pedirCuenta(pedido)" 
+                  class="btn btn-sm btn-secondary"
+                >
+                  🖨️ {{ $t('cashier.print_bill') }}
+                </button>
+                <button 
+                  @click="seleccionarPedido(pedido)" 
                   class="btn btn-sm btn-primary"
-                  title="Registrar el pago"
                 >
                   {{ $t('cashier.pay') }}
                 </button>
@@ -521,14 +525,29 @@ const imprimirContenido = (data) => {
 
 const pedirCuenta = async (pedido) => {
   try {
-    prepararTicket(pedido, 'cuenta');
-    imprimirContenido(ticketData.value);
-    await pedidoStore.actualizarEstadoPedido(pedido.id, 'en_caja');
-    await actualizarPedidos(); 
-  } catch (err) {
-    console.error(err);
-    alert('❌ ' + t('common.error'));
+    const response = await api.imprimirCuenta(pedido.id);
+    
+    if (response?.data?.content) {
+      // Versión simplificada: imprimir directo (sin recibos ni abrir en iframe)
+      const contenidoHTML = response.data.content;
+      const ventanaImpresion = window.open('', '_blank', 'width=300,height=600');
+      ventanaImpresion.document.write(contenidoHTML);
+      ventanaImpresion.document.close();
+      ventanaImpresion.print();
+      ventanaImpresion.close();
+    } else {
+      alert('Error al generar la cuenta');
+    }
+  } catch (error) {
+    console.error('Error al imprimir cuenta:', error);
+    alert('Error al solicitar cuenta: ' + (error.response?.data?.error || error.message));
   }
+};
+
+// ✅ NUEVO: Ver cuenta online
+const verCuentaOnline = (pedidoId) => {
+  const baseUrl = window.location.origin;
+  window.open(`${baseUrl}/cuenta/${pedidoId}`, '_blank');
 };
 
 const verDetallesPago = async (pedidoId) => {
@@ -554,7 +573,15 @@ onMounted(() => {
   
   socket.on('pedido_actualizado', (data) => {
     console.log('📝 Pedido actualizado en caja:', data);
-    actualizarPedidos();
+    
+    // ✅ NUEVO: Si hay un pedido seleccionado (usuario trabajando), no recargar automáticamente
+    if (pedidoSeleccionado.value) {
+      console.log('⚠️ Usuario trabajando en pago, marcando actualización pendiente');
+      hayActualizacionPendiente.value = true;
+    } else {
+      // No hay trabajo activo, recargar normalmente
+      actualizarPedidos();
+    }
   });
   
   socket.on('pedido_pagado', async (data) => {

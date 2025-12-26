@@ -60,7 +60,9 @@
         "pagado": "Pagado",
         "listo_pagar": "Listo para Pagar",
         "en_caja": "En Caja",
-        "cancelado": "Cancelado"
+        "cancelado": "Cancelado",
+        "pendiente": "Pendiente",
+        "en_preparacion": "En Preparación"
     },
     "kitchen": {
         "title": "Panel de Cocina",
@@ -203,6 +205,7 @@
         "cancel": "❌ Cancelar",
         "qr": "📱 QR",
         "notes_placeholder": "Notas especiales (ej: Sin picante, sin tomate...)",
+        "item_notes_placeholder": "Notas para cocina (ej: Sin cebolla, bien cocido...)",
         "total": "Total:",
         "scan_status": "📱 Escanea para ver el estado",
         "edit_order_title": "✏️ Editar Pedido - Mesa",
@@ -219,7 +222,14 @@
         "confirm_cancel": "⚠️ ¿Seguro que quieres cancelar este pedido?\nNo se eliminarán los datos, pero dejará de estar activo.",
         "alert_cancelled": "✅ Pedido cancelado",
         "item_added": "✅ \"{name}\" eliminado del pedido",
-        "ready_since": "Listo hace"
+        "ready_since": "Listo hace",
+        "alert_items_added": "✅ Items agregados al pedido",
+        "search_dishes": "Buscar platos...",
+        "confirm_send_order": "¿Confirmar envío del pedido a cocina?",
+        "confirm_add_items": "¿Confirmar agregar estos items al pedido?",
+        "view_bill": "Ver Cuenta",
+        "back_to_panel": "Volver al Panel",
+        "back_to_order_status": "Volver al Estado"
     },
     "cashier": {
         "title": "💰 Panel de Caja",
@@ -257,7 +267,10 @@
         "single_payment": "Pago Único",
         "multiple_payment": "Pago Múltiple",
         "alert_payment_registered": "✅ Pago registrado.",
-        "alert_error_payment": "❌ Error al registrar pago"
+        "alert_error_payment": "❌ Error al registrar pago",
+        "confirm_payment_prompt": "¿Confirmar el pago? Esta acción no se puede deshacer.",
+        "print_bill": "Imprimir Cuenta",
+        "view_bill_online": "Ver Cuenta"
     },
     "admin": {
         "title": "Panel Administrativo",

@@ -819,14 +819,55 @@ router.delete('/:id/items/:itemId', async (req, res) => {
             `, [nuevoReservado, nuevoEstado, item.menu_item_id]);
         }
 
-        // Recalcular total del pedido
+        // ✅ FIX: Recalcular subtotal, propina y total del pedido
         const result = await getAsync(`
-            SELECT COALESCE(SUM(cantidad * precio_unitario), 0) as nuevo_total
+            SELECT COALESCE(SUM(cantidad * precio_unitario), 0) as nuevo_subtotal
             FROM pedido_items WHERE pedido_id = $1
         `, [pedidoId]);
 
-        const nuevoTotal = parseFloat(result.nuevo_total);
-        await runAsync('UPDATE pedidos SET total = $1 WHERE id = $2', [nuevoTotal, pedidoId]);
+        const nuevoSubtotal = parseFloat(result.nuevo_subtotal);
+
+        // Obtener porcentaje de propina de configuración (default 10%)
+        const configPropina = await getAsync('SELECT valor FROM configuracion WHERE clave = $1', ['porcentaje_propina']);
+        const porcentajePropina = parseFloat(configPropina?.valor || 10);
+
+        const nuevaPropina = Math.round(nuevoSubtotal * (porcentajePropina / 100));
+        const nuevoTotal = nuevoSubtotal + nuevaPropina;
+
+        await runAsync('UPDATE pedidos SET subtotal = $1, propina_monto = $2, total = $3 WHERE id = $4',
+            [nuevoSubtotal, nuevaPropina, nuevoTotal, pedidoId]);
+
+        // ✅ NUEVO: Verificar si todos los items restantes están servidos/listos
+        const itemsRestantes = await allAsync(`
+            SELECT estado FROM pedido_items WHERE pedido_id = $1
+        `, [pedidoId]);
+
+        let nuevoEstadoPedido = null;
+
+        if (itemsRestantes.length > 0) {
+            const todosServidos = itemsRestantes.every(i => i.estado === 'servido');
+            const todosListosOServidos = itemsRestantes.every(i => i.estado === 'listo' || i.estado === 'servido');
+
+            if (todosServidos) {
+                // Si todos están servidos, marcar pedido como servido
+                nuevoEstadoPedido = 'servido';
+                await runAsync(`
+                    UPDATE pedidos SET estado = 'servido', delivered_at = CURRENT_TIMESTAMP 
+                    WHERE id = $1
+                `, [pedidoId]);
+                console.log(`📋 Pedido ${pedidoId}: Todos los items restantes están servidos, marcando pedido como servido`);
+            } else if (todosListosOServidos) {
+                // Si todos están listos o servidos, marcar pedido como listo
+                nuevoEstadoPedido = 'listo';
+                await runAsync('UPDATE pedidos SET estado = $1 WHERE id = $2', ['listo', pedidoId]);
+                console.log(`📋 Pedido ${pedidoId}: Todos los items restantes están listos, marcando pedido como listo`);
+            }
+        } else {
+            // Si no quedan items, cancelar el pedido
+            nuevoEstadoPedido = 'cancelado';
+            await runAsync('UPDATE pedidos SET estado = $1 WHERE id = $2', ['cancelado', pedidoId]);
+            console.log(`📋 Pedido ${pedidoId}: No quedan items, cancelando pedido`);
+        }
 
         // Emitir eventos
         req.app.get('io').emit('pedido_editado', {
@@ -839,7 +880,7 @@ router.delete('/:id/items/:itemId', async (req, res) => {
 
         req.app.get('io').emit('pedido_actualizado', {
             id: pedidoId,
-            estado: 'en_cocina' // Para que cocina recargue
+            estado: nuevoEstadoPedido || 'en_cocina' // Usar el nuevo estado si existe
         });
 
         res.json({
@@ -915,14 +956,49 @@ router.put('/:id/items/:itemId/cantidad', async (req, res) => {
             `, [Math.max(0, nuevoStock), nuevoEstado, item.menu_item_id]);
         }
 
-        // Recalcular total
+        // ✅ FIX: Recalcular subtotal, propina y total
         const result = await getAsync(`
-            SELECT COALESCE(SUM(cantidad * precio_unitario), 0) as nuevo_total
+            SELECT COALESCE(SUM(cantidad * precio_unitario), 0) as nuevo_subtotal
             FROM pedido_items WHERE pedido_id = $1
         `, [pedidoId]);
 
-        const nuevoTotal = parseFloat(result.nuevo_total);
-        await runAsync('UPDATE pedidos SET total = $1 WHERE id = $2', [nuevoTotal, pedidoId]);
+        const nuevoSubtotal = parseFloat(result.nuevo_subtotal);
+
+        // Obtener porcentaje de propina de configuración (default 10%)
+        const configPropina = await getAsync('SELECT valor FROM configuracion WHERE clave = $1', ['porcentaje_propina']);
+        const porcentajePropina = parseFloat(configPropina?.valor || 10);
+
+        const nuevaPropina = Math.round(nuevoSubtotal * (porcentajePropina / 100));
+        const nuevoTotal = nuevoSubtotal + nuevaPropina;
+
+        await runAsync('UPDATE pedidos SET subtotal = $1, propina_monto = $2, total = $3 WHERE id = $4',
+            [nuevoSubtotal, nuevaPropina, nuevoTotal, pedidoId]);
+
+        // ✅ NUEVO: Verificar si todos los items restantes están servidos/listos (por consistencia)
+        const itemsRestantes = await allAsync(`
+            SELECT estado FROM pedido_items WHERE pedido_id = $1
+        `, [pedidoId]);
+
+        let nuevoEstadoPedido = null;
+
+        if (itemsRestantes.length > 0) {
+            const todosServidos = itemsRestantes.every(i => i.estado === 'servido');
+            const todosListosOServidos = itemsRestantes.every(i => i.estado === 'listo' || i.estado === 'servido');
+
+            if (todosServidos) {
+                nuevoEstadoPedido = 'servido';
+                await runAsync(`
+                    UPDATE pedidos SET estado = 'servido', delivered_at = CURRENT_TIMESTAMP 
+                    WHERE id = $1
+                `, [pedidoId]);
+            } else if (todosListosOServidos) {
+                nuevoEstadoPedido = 'listo';
+                await runAsync('UPDATE pedidos SET estado = $1 WHERE id = $2', ['listo', pedidoId]);
+            }
+        } else {
+            nuevoEstadoPedido = 'cancelado';
+            await runAsync('UPDATE pedidos SET estado = $1 WHERE id = $2', ['cancelado', pedidoId]);
+        }
 
         // Emitir eventos
         req.app.get('io').emit('pedido_editado', {

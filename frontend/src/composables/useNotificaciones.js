@@ -142,9 +142,10 @@ export function useNotificaciones(rol) {
     };
 
     onMounted(() => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
+        // ✅ REMOVIDO: Permission request ahora se hace en main.js solo para usuarios logueados
+        // if ('Notification' in window && Notification.permission === 'default') {
+        //     Notification.requestPermission();
+        // }
 
         if (!socket.connected) socket.connect();
 

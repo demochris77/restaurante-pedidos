@@ -18,6 +18,11 @@
       <div class="header">
         <h1>🧾 {{ $t('bill.title') }} {{ pedido.mesa_numero }}</h1>
         <div class="pedido-id">{{ $t('bill.order_id') }}{{ pedido.id.slice(-8) }}</div>
+        
+        <!-- ✅ NUEVO: Botón de navegación -->
+        <button @click="volverAtras" class="btn-back">
+          ⬅️ {{ esMeseroLogueado ? $t('waiter.back_to_panel') : $t('waiter.back_to_order_status') }}
+        </button>
       </div>
 
       <!-- Estado del Pedido -->
@@ -109,6 +114,30 @@ const path = window.location.pathname;
 const pathParts = path.split('/');
 const cuentaId = pathParts[2]; // ID después de /cuenta/
 
+// ✅ NUEVO: Detectar si es usuario logueado (cualquier rol)
+const esMeseroLogueado = ref(false);
+
+const volverAtras = () => {
+  if (esMeseroLogueado.value) {
+    // Usuario logueado (cualquier rol): volver al panel principal
+    window.location.href = '/';
+  } else {
+    // Cliente público: volver a order status  
+    window.location.href = `/pedido/${cuentaId}/status`;
+  }
+};
+
+// Detectar si está logueado
+const detectarLogin = () => {
+  try {
+    const token = localStorage.getItem('token');
+    const usuario = localStorage.getItem('usuario');
+    esMeseroLogueado.value = !!(token && usuario);
+  } catch {
+    esMeseroLogueado.value = false;
+  }
+};
+
 const itemsAgrupados = computed(() => {
   const grupos = {};
   (items.value || []).forEach(item => {
@@ -196,6 +225,7 @@ const calcularPorcentajePropina = () => {
 onMounted(() => {
   if (cuentaId) {
     cargarPedido();
+    detectarLogin(); // ✅ Detectar si está logueado
   } else {
     error.value = t('bill.invalid_id');
     loading.value = false;
@@ -259,6 +289,28 @@ onMounted(() => {
   border-radius: 25px;
   font-size: 14px;
   font-weight: 500;
+}
+
+/* ✅ NUEVO: Back button */
+.btn-back {
+  margin-top: 16px;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.btn-back:hover {
+  background: rgba(255,255,255,0.3);
+  border-color: rgba(255,255,255,0.5);
+  transform: translateY(-2px);
 }
 
 .status-card {

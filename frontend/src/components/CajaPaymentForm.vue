@@ -167,17 +167,17 @@
       v-if="modoPago === 'unico'"
       @click="procesarPago"
       class="btn btn-success btn-full"
-      :disabled="!metodoSeleccionado || (metodoSeleccionado === 'efectivo' && (!montoRecibido || montoRecibido <= 0))"
+      :disabled="!metodoSeleccionado || (metodoSeleccionado === 'efectivo' && (!montoRecibido || montoRecibido <= 0)) || procesandoPago"
     >
-        {{ $t('cashier.confirm_payment') }}
+        {{ procesandoPago ? $t('common.saving') : $t('cashier.confirm_payment') }}
       </button>
       <button
       v-else
       @click="procesarPagoMultiple"
       class="btn btn-success btn-full"
-      :disabled="totalIngresadoMultiple <= 0"
+      :disabled="totalIngresadoMultiple <= 0 || procesandoPago"
     >
-        Confirmar Pagos ({{ Math.round(totalIngresadoMultiple).toLocaleString() }})
+        {{ procesandoPago ? $t('common.saving') : `Confirmar Pagos (${Math.round(totalIngresadoMultiple).toLocaleString()})` }}
       </button>
       
       <button
@@ -211,6 +211,7 @@ const montoRecibido = ref(null);
 const pagosMultiples = ref({});
 const opcionPropina = ref('sugerida');
 const propinaPersonalizada = ref(null);
+const procesandoPago = ref(false); // ✅ NUEVO: Loading state
 
 // Inicializar pagos múltiples
 watch(() => props.metodosPago, (newVal) => {
@@ -285,11 +286,18 @@ const getPropinaFinal = () => {
 const procesarPago = async () => {
   if (!metodoSeleccionado.value) return;
 
+  // ✅ NUEVO: Confirmation dialog
+  const confirmado = confirm(t('cashier.confirm_payment_prompt'));
+  if (!confirmado) return;
+
+  procesandoPago.value = true;
+  
   // ✅ USAR totalAPagar en lugar de pendienteActual
   const pendienteActual = totalAPagar.value;
   
   if (!montoRecibido.value || montoRecibido.value <= 0) {
     alert('Ingresa un monto válido');
+    procesandoPago.value = false;
     return;
   }
   
@@ -351,11 +359,19 @@ const procesarPago = async () => {
   } catch (err) {
     console.error(err);
     alert('❌ ' + (err.response?.data?.error || t('cashier.alert_error_payment')));
+  } finally {
+    procesandoPago.value = false;
   }
 };
 
 const procesarPagoMultiple = async () => {
     const pendienteActual = props.saldoPendiente != null ? Number(props.saldoPendiente) : Number(props.pedido.total);
+    
+    // ✅ NUEVO: Confirmation dialog
+    const confirmado = confirm(t('cashier.confirm_payment_prompt'));
+    if (!confirmado) return;
+    
+    procesandoPago.value = true;
     
     // Validar montos
     const montos = Object.entries(pagosMultiples.value)
@@ -399,6 +415,8 @@ const procesarPagoMultiple = async () => {
     } catch (err) {
         console.error(err);
         alert('❌ Error procesando pago múltiple: ' + (err.response?.data?.error || err.message));
+    } finally {
+        procesandoPago.value = false;
     }
 };
 

@@ -100,8 +100,15 @@
     gap: 20px;
 }
 
+/* ✅ NUEVO: Grid para mesas colapsables */
+.mesas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
 /* =========================================
-   TARJETAS DE PEDIDO
+   TARJETAS DE PEDIDO (Nuevos)
    ========================================= */
 .pedido-card {
     background: white;
@@ -116,11 +123,6 @@
 .pedido-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.pedido-cooking {
-    border-color: #fbbf24;
-    background: #fffbeb;
 }
 
 .card-header {
@@ -157,6 +159,137 @@
     margin-top: 12px;
     border-left: 3px solid #f59e0b;
     font-weight: 500;
+}
+
+/* ✅ NUEVO: Notas por item */
+.item-nota {
+    background: #fef3c7;
+    padding: 6px 10px;
+    margin-top: 4px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #92400e;
+    border-left: 2px solid #f59e0b;
+}
+
+.item-nota-preparacion {
+    background: #fef3c7;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #92400e;
+    border-left: 3px solid #f59e0b;
+    font-weight: 500;
+    margin-top: 8px;
+}
+
+/* =========================================
+   TARJETAS DE MESA COLAPSABLES
+   ========================================= */
+.mesa-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.mesa-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.mesa-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    transition: all 0.2s;
+}
+
+.mesa-card-header:hover {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.mesa-expanded .mesa-card-header {
+    border-bottom: 2px solid #fbbf24;
+}
+
+.mesa-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.items-count {
+    font-size: 12px;
+    color: #78350f;
+    font-weight: 600;
+}
+
+.mesa-estado {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tiempo-badge {
+    background: #f59e0b;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.expand-icon {
+    font-size: 16px;
+    color: #92400e;
+    transition: transform 0.3s;
+}
+
+.mesa-expanded .expand-icon {
+    transform: rotate(0deg);
+}
+
+.mesa-card-body {
+    padding: 20px;
+    background: white;
+    animation: expandBody 0.3s ease;
+}
+
+@keyframes expandBody {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+
+    to {
+        opacity: 1;
+        max-height: 1000px;
+    }
+}
+
+.btn-close-mesa {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    transition: all 0.2s;
+    margin-bottom: 16px;
+    width: auto;
+    align-self: flex-end;
+}
+
+.btn-close-mesa:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
 }
 
 /* =========================================
@@ -233,7 +366,7 @@
 }
 
 /* =========================================
-   LISTA DE ITEMS (Vista Simple)
+   LISTA DE ITEMS (Vista Simple - Nuevos)
    ========================================= */
 .items-list {
     margin-bottom: 12px;
@@ -242,7 +375,8 @@
 .item-line {
     padding: 8px 0;
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+    gap: 4px;
     border-bottom: 1px solid #f3f4f6;
 }
 
@@ -446,11 +580,13 @@
         gap: 16px;
     }
 
-    .pedidos-columns {
+    .pedidos-columns,
+    .mesas-grid {
         grid-template-columns: 1fr;
     }
 
-    .pedido-card {
+    .pedido-card,
+    .mesa-card {
         padding: 16px;
     }
 
@@ -473,5 +609,9 @@
         right: 16px;
         left: 16px;
         width: auto;
+    }
+
+    .mesa-card-body {
+        padding: 12px;
     }
 }

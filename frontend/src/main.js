@@ -24,12 +24,23 @@ app.mount('#app')
 
 // Service Worker eliminado para evitar caché
 // if ('serviceWorker' in navigator) { ... }
-// Pedir permisos de notificación
+
+// ✅ MODIFICADO: Solo pedir permisos de notificación si el usuario está logueado (staff)
 if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission().then(permission => {
-        console.log('Permisos de notificación:', permission);
-    });
+    // Verificar si hay un usuario logueado
+    const token = localStorage.getItem('token');
+    const usuario = localStorage.getItem('usuario');
+
+    // Solo pedir si es staff (tiene credenciales)
+    if (token && usuario) {
+        Notification.requestPermission().then(permission => {
+            console.log('Permisos de notificación:', permission);
+        });
+    } else {
+        console.log('👤 Usuario público - notificaciones no requeridas');
+    }
 }
+
 
 
 // ============= DETECTAR ESTADO DE CONEXIÓN =============

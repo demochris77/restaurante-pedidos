@@ -55,6 +55,17 @@
             </button>
           </div>
 
+          <!-- ✅ NUEVO: Buscador de platos -->
+          <div class="search-container">
+            <input
+              v-model="busqueda"
+              type="text"
+              :placeholder="$t('waiter.search_dishes')"
+              class="search-input"
+            />
+            <button v-if="busqueda" @click="busqueda = ''" class="btn-clear-search">✕</button>
+          </div>
+
           <div class="items-grid">
             <div
               v-for="item in itemsPorCategoria"
@@ -105,6 +116,16 @@
                 <span class="precio">${{ (item.cantidad * item.precio).toFixed(2) }}</span>
                 <button @click="removerItem(idx)" class="btn-remove">✕</button>
               </div>
+              
+              <!-- ✅ NUEVO: Notas por item (solo para items cocinables) -->
+              <div v-if="!item.es_directo" class="item-notas-container">
+                <textarea
+                  v-model="item.notas"
+                  :placeholder="$t('waiter.item_notes_placeholder') || 'Notas para cocina...'"
+                  class="item-notas-input"
+                  rows="2"
+                ></textarea>
+              </div>
             </div>
           </div>
 
@@ -122,9 +143,9 @@
           <button
             @click="enviarPedido"
             class="btn btn-primary btn-submit"
-            :disabled="!mesaSeleccionada || pedidoEnProgreso.length === 0"
+            :disabled="!mesaSeleccionada || pedidoEnProgreso.length === 0 || enviandoPedido"
           >
-            {{ $t('waiter.send_to_kitchen') }}
+            {{ enviandoPedido ? $t('common.saving') : $t('waiter.send_to_kitchen') }}
           </button>
         </div>
 
@@ -165,9 +186,14 @@
                 <div class="info">
                   <span>{{ pedido.items_count }} items</span>
                 </div>
-                <button @click="marcarListoPagar(pedido.id)" class="btn btn-pagar">
-                  {{ $t('waiter.ready_to_pay') }}
-                </button>
+                <div class="btn-group">
+                  <button @click="verCuenta(pedido.id)" class="btn btn-secondary btn-small">
+                    👁️ {{ $t('waiter.view_bill') }}
+                  </button>
+                  <button @click="marcarListoPagar(pedido.id)" class="btn btn-pagar">
+                    {{ $t('waiter.ready_to_pay') }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -292,21 +318,47 @@
           <button
             v-for="cat in categorias"
             :key="cat"
-            @click="categoriaEdicion = cat"
+            @click="toggleCategoriaEdicion(cat)"
             :class="['tab', { 'tab-active': categoriaEdicion === cat }]"
           >
             {{ cat }}
           </button>
         </div>
+        
+        <!-- ✅ NUEVO: Buscador en edición -->
+        <div class="search-container">
+          <input
+            v-model="busquedaEdicion"
+            type="text"
+            :placeholder="$t('waiter.search_dishes')"
+            class="search-input"
+          />
+          <button v-if="busquedaEdicion" @click="busquedaEdicion = ''" class="btn-clear-search">✕</button>
+        </div>
+        
         <div class="items-agregar-grid">
           <div
             v-for="menuItem in itemsPorCategoriaEdicion"
             :key="menuItem.id"
-            :class="['item-agregar', { 'item-disabled': menuItem.estado_inventario === 'no_disponible' }]"
+            :class="['item-agregar', { 
+              'item-disabled': menuItem.estado_inventario === 'no_disponible',
+              'item-low-stock': menuItem.estado_inventario === 'poco_stock'
+            }]"
             @click="agregarItemAEdicion(menuItem)"
           >
             <span class="nombre">{{ menuItem.nombre }}</span>
             <span class="precio">${{ menuItem.precio }}</span>
+            
+            <!-- ✅ NUEVO: Stock status -->
+            <div v-if="menuItem.usa_inventario && menuItem.stock_actual !== null" class="item-stock-mini">
+              📦 {{ menuItem.stock_actual }}
+            </div>
+            <div v-if="menuItem.estado_inventario === 'no_disponible'" class="item-agotado-mini">
+              ❌ AGOTADO
+            </div>
+            <div v-else-if="menuItem.estado_inventario === 'poco_stock'" class="item-warning-mini">
+              ⚠️ BAJO
+            </div>
           </div>
         </div>
 
@@ -317,8 +369,13 @@
             <span>{{ item.cantidad }}x {{ item.nombre }} - ${{ (item.cantidad * item.precio_unitario).toFixed(2) }}</span>
             <button @click="quitarItemPendiente(idx)" class="btn-quitar">✕</button>
           </div>
-          <button @click="confirmarAgregarItems" class="btn btn-primary" style="width:100%; margin-top:8px;">
-            {{ $t('waiter.confirm_new_items') }}
+          <button 
+            @click="confirmarAgregarItems" 
+            class="btn btn-primary" 
+            style="width:100%; margin-top:8px;"
+            :disabled="agregandoItems"
+          >
+            {{ agregandoItems ? $t('common.saving') : $t('waiter.confirm_new_items') }}
           </button>
         </div>
       </div>
@@ -351,6 +408,9 @@ const categoriaSeleccionada = ref('');
 const pedidoEnProgreso = ref([]);
 const notasPedido = ref('');
 const loading = ref(false);
+const busqueda = ref(''); // ✅ NUEVO: Search query
+const enviandoPedido = ref(false); // ✅ NUEVO: Loading state for sending order
+const agregandoItems = ref(false); // ✅ NUEVO: Loading state for adding items
 const qrComponent = ref(null);
 const mostrarQR = ref(false);
 const urlParaQR = ref('');
@@ -362,11 +422,32 @@ const mostrarEditorPedido = ref(false);
 const pedidoEditando = ref(null);
 const itemsParaAgregar = ref([]);
 const categoriaEdicion = ref('');
+const busquedaEdicion = ref(''); // ✅ NUEVO: Search en edición
 
 // Computed para items del menú en el editor
 const itemsPorCategoriaEdicion = computed(() => {
-  if (!categoriaEdicion.value) return [];
-  return pedidoStore.menu.filter(item => item.categoria === categoriaEdicion.value);
+  // ✅ NUEVO: Don't show items if no category and no search
+  if (!categoriaEdicion.value && !busquedaEdicion.value) {
+    return [];
+  }
+  
+  let items = pedidoStore.menu;
+  
+  // Filter by category
+  if (categoriaEdicion.value) {
+    items = items.filter(item => item.categoria === categoriaEdicion.value);
+  }
+  
+  // ✅ NUEVO: Filter by search
+  if (busquedaEdicion.value) {
+    const query = busquedaEdicion.value.toLowerCase();
+    items = items.filter(item =>
+      item.nombre.toLowerCase().includes(query) ||
+      (item.descripcion && item.descripcion.toLowerCase().includes(query))
+    );
+  }
+  
+  return items;
 });
 
 const getHintEliminar = (item) => {
@@ -378,12 +459,11 @@ const toggleMesa = (numero) => {
   if (mesaSeleccionada.value === numero) {
     mesaSeleccionada.value = null;
     categoriaSeleccionada.value = '';
-    // Opcional: limpiar pedido en progreso si se desea resetear totalmente
-    // pedidoEnProgreso.value = []; 
+    busqueda.value = ''; // ✅ NUEVO: Clear search
   } else {
     mesaSeleccionada.value = numero;
-    // Resetear categoría al cambiar de mesa para UX limpia
     categoriaSeleccionada.value = '';
+    busqueda.value = ''; // ✅ NUEVO: Clear search
   }
 };
 
@@ -392,6 +472,15 @@ const toggleCategoria = (cat) => {
     categoriaSeleccionada.value = '';
   } else {
     categoriaSeleccionada.value = cat;
+  }
+};
+
+// ✅ NUEVO: Toggle category in editor
+const toggleCategoriaEdicion = (cat) => {
+  if (categoriaEdicion.value === cat) {
+    categoriaEdicion.value = '';
+  } else {
+    categoriaEdicion.value = cat;
   }
 };
 
@@ -531,8 +620,28 @@ const categorias = computed(() => {
 });
 
 const itemsPorCategoria = computed(() => {
-  if (!categoriaSeleccionada.value) return [];
-  return pedidoStore.menu.filter(item => item.categoria === categoriaSeleccionada.value);
+  // ✅ NUEVO: Don't show items if no category selected and no search query
+  if (!categoriaSeleccionada.value && !busqueda.value) {
+    return [];
+  }
+  
+  let items = pedidoStore.menu;
+  
+  // Filter by category if selected
+  if (categoriaSeleccionada.value) {
+    items = items.filter(item => item.categoria === categoriaSeleccionada.value);
+  }
+  
+  // ✅ NUEVO: Filter by search query
+  if (busqueda.value) {
+    const query = busqueda.value.toLowerCase();
+    items = items.filter(item => 
+      item.nombre.toLowerCase().includes(query) ||
+      (item.descripcion && item.descripcion.toLowerCase().includes(query))
+    );
+  }
+  
+  return items;
 });
 
 const misPedidos = computed(() => {
@@ -660,6 +769,11 @@ const calcularTotal = () => {
 };
 
 const enviarPedido = async () => {
+  // ✅ NUEVO: Confirmation dialog
+  const confirmado = confirm(t('waiter.confirm_send_order'));
+  if (!confirmado) return;
+  
+  enviandoPedido.value = true;
   try {
     await pedidoStore.crearPedido(
       mesaSeleccionada.value,
@@ -672,6 +786,7 @@ const enviarPedido = async () => {
     pedidoEnProgreso.value = [];
     mesaSeleccionada.value = null;
     notasPedido.value = '';
+    busqueda.value = ''; // ✅ NUEVO: Clear search
     localStorage.removeItem('mesero_pedidoEnProgreso');
     localStorage.removeItem('mesero_mesaSeleccionada');
     localStorage.removeItem('mesero_notasPedido');
@@ -679,6 +794,8 @@ const enviarPedido = async () => {
     alert(t('waiter.alert_order_sent'));
   } catch (err) {
     alert(t('waiter.alert_error_sending'));
+  } finally {
+    enviandoPedido.value = false;
   }
 };
 
@@ -743,6 +860,12 @@ const marcarListoPagar = async (pedidoId) => {
   }
 };
 
+// ✅ NUEVO: Ver cuenta online
+const verCuenta = (pedidoId) => {
+  const baseUrl = window.location.origin;
+  window.open(`${baseUrl}/cuenta/${pedidoId}`, '_blank');
+};
+
 // ============= FUNCIONES DE EDICIÓN DE PEDIDOS =============
 
 const abrirEditorPedido = async (pedido) => {
@@ -752,10 +875,9 @@ const abrirEditorPedido = async (pedido) => {
     pedidoEditando.value = response.data;
     itemsParaAgregar.value = [];
     
-    // Seleccionar primera categoría
-    if (categorias.value.length > 0) {
-      categoriaEdicion.value = categorias.value[0];
-    }
+    // ✅ NUEVO: No seleccionar categoría automáticamente (empezar con todas cerradas)
+    categoriaEdicion.value = '';
+    busquedaEdicion.value = '';
     
     mostrarEditorPedido.value = true;
   } catch (err) {
@@ -768,6 +890,7 @@ const cerrarEditorPedido = () => {
   mostrarEditorPedido.value = false;
   pedidoEditando.value = null;
   itemsParaAgregar.value = [];
+  busquedaEdicion.value = ''; // ✅ NUEVO: Clear search
 };
 
 const agregarItemAEdicion = (menuItem) => {
@@ -802,19 +925,31 @@ const quitarItemPendiente = (idx) => {
 const confirmarAgregarItems = async () => {
   if (itemsParaAgregar.value.length === 0) return;
   
+  // ✅ NUEVO: Confirmation dialog
+  const confirmado = confirm(t('waiter.confirm_add_items'));
+  if (!confirmado) return;
+  
+  agregandoItems.value = true;
   try {
     await api.agregarItemsAPedido(pedidoEditando.value.id, itemsParaAgregar.value);
     
-    // Recargar pedido y datos
-    await pedidoStore.cargarPedidosActivos();
+    // Recargar pedido para ver cambios
     const response = await api.getPedido(pedidoEditando.value.id);
     pedidoEditando.value = response.data;
-    itemsParaAgregar.value = [];
     
-    alert(t('waiter.alert_order_sent'));
+    // Limpiar items pendientes y search
+    itemsParaAgregar.value = [];
+    busquedaEdicion.value = '';
+    
+    // Recargar pedidos activos en el store
+    await pedidoStore.cargarPedidosActivos();
+    
+    alert(t('waiter.alert_items_added'));
   } catch (err) {
     console.error('Error agregando items:', err);
-    alert('❌ Error: ' + (err.response?.data?.error || t('common.error')));
+    alert(t('common.error'));
+  } finally {
+    agregandoItems.value = false;
   }
 };
 
