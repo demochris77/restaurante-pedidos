@@ -22,8 +22,16 @@ app.use(router)  // Usa el router
 app.use(i18n) // ✅ Usar i18n
 app.mount('#app')
 
-// Service Worker eliminado para evitar caché
-// if ('serviceWorker' in navigator) { ... }
+// ✅ NUEVO: Register Service Worker for Push Notifications
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+        .then(reg => {
+            console.log('✅ Service Worker registered:', reg.scope);
+        })
+        .catch(err => {
+            console.error('❌ Service Worker registration failed:', err);
+        });
+}
 
 // ✅ MODIFICADO: Solo pedir permisos de notificación si el usuario está logueado (staff)
 if ('Notification' in window && Notification.permission === 'default') {

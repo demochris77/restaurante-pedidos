@@ -56,8 +56,9 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useUsuarioStore } from '../stores/usuarioStore';
 import { useRouter } from 'vue-router';
+import { useUsuarioStore } from '../stores/usuarioStore';
+import { subscribeToPush } from '../utils/pushSubscription'; // ✅ NUEVO
 import api from '../api'; 
 import { useI18n } from 'vue-i18n';
 

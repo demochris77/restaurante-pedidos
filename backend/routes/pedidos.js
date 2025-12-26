@@ -1,6 +1,7 @@
 import express from 'express';
 import { getAsync, allAsync, runAsync } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { sendPushToRole, sendPushToUser } from '../utils/pushNotifications.js'; // ✅ NUEVO
 
 const router = express.Router();
 
@@ -152,6 +153,25 @@ router.post('/', async (req, res) => {
         };
 
         req.app.get('io').emit('nuevo_pedido', nuevoPedido);
+
+        // ✅ NUEVO: Send push notification to kitchen
+        try {
+            const cookableItems = items.filter(item => !item.es_directo);
+            if (cookableItems.length > 0) {
+                await sendPushToRole('cocinero',
+                    'new_order',
+                    'new_order_body',
+                    [mesa_numero, cookableItems.length],
+                    {
+                        url: '/',
+                        pedidoId: pedido_id,
+                        mesa: mesa_numero
+                    }
+                );
+            }
+        } catch (pushError) {
+            console.warn('⚠️ Push notification failed:', pushError);
+        }
 
         res.json({
             ...nuevoPedido,
@@ -340,6 +360,31 @@ router.put('/:id/estado', async (req, res) => {
 
         req.app.get('io').emit('pedido_actualizado', { id: req.params.id, estado });
 
+        // ✅ NUEVO: Notificar al cajero cuando está listo para pagar
+        if (estado === 'listo_pagar') {
+            try {
+                const pedido = await getAsync(
+                    'SELECT mesa_numero, total FROM pedidos WHERE id = $1',
+                    [req.params.id]
+                );
+
+                if (pedido) {
+                    await sendPushToRole('cajero',
+                        'payment_ready',
+                        'payment_ready_body',
+                        [pedido.mesa_numero, pedido.total.toFixed(2)],
+                        {
+                            url: '/',
+                            pedidoId: req.params.id,
+                            mesa: pedido.mesa_numero
+                        }
+                    );
+                }
+            } catch (pushError) {
+                console.warn('⚠️ Push notification failed:', pushError);
+            }
+        }
+
         res.json({ message: '✓ Pedido actualizado', estado });
 
     } catch (error) {
@@ -360,7 +405,7 @@ router.put('/items/:id/start', async (req, res) => {
             `, [itemId]);
 
         const item = await getAsync(`
-            SELECT pi.*, mi.nombre, p.mesa_numero, p.usuario_mesero_id
+            SELECT pi.*, mi.nombre, mi.es_directo, p.mesa_numero, p.usuario_mesero_id
             FROM pedido_items pi
             JOIN menu_items mi ON pi.menu_item_id = mi.id
             JOIN pedidos p ON pi.pedido_id = p.id
@@ -393,7 +438,7 @@ router.put('/items/:id/complete', async (req, res) => {
         const itemId = req.params.id;
 
         const item = await getAsync(`
-            SELECT pi.*, mi.nombre, p.mesa_numero, p.usuario_mesero_id
+            SELECT pi.*, mi.nombre, mi.es_directo, p.mesa_numero, p.usuario_mesero_id
             FROM pedido_items pi
             JOIN menu_items mi ON pi.menu_item_id = mi.id
             JOIN pedidos p ON pi.pedido_id = p.id
@@ -452,7 +497,26 @@ router.put('/items/:id/complete', async (req, res) => {
             tiempoDesdeReady: 0 // Inicialmente 0 minutos
         });
 
-        res.json({ message: '✓ Item completado', item });
+        // ✅ NUEVO: Send push notification to waiter (only for cookable items)
+        try {
+            // Solo notificar si NO es item directo (bebidas, etc.)
+            if (item.usuario_mesero_id && !item.es_directo) {
+                await sendPushToUser(item.usuario_mesero_id,
+                    'item_ready',
+                    'item_ready_body',
+                    [item.mesa_numero, item.nombre],
+                    {
+                        url: '/',
+                        pedidoId: item.pedido_id,
+                        mesa: item.mesa_numero
+                    }
+                );
+            }
+        } catch (pushError) {
+            console.warn('⚠️ Push notification failed:', pushError);
+        }
+
+        res.json({ message: '✓ Item completado', tiempoReal });
     } catch (error) {
         console.error('Error en /items/:id/complete:', error);
         res.status(500).json({ error: error.message });

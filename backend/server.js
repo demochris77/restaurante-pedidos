@@ -23,6 +23,8 @@ import manifestRoutes from './routes/manifest.js';
 import iconsRoutes from './routes/icons.js';
 import wellKnownRoutes from './routes/well-known.js';
 import configItemsRoutes from './routes/configItems.js'; // ✅ NUEVO
+import pushRoutes from './routes/push.js'; // ✅ NUEVO: Push notifications
+import { sendPushToRole, sendPushToUser } from './utils/pushNotifications.js'; // ✅ NUEVO
 
 // dotenv.config();
 
@@ -113,6 +115,9 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS estado_inventario TEXT DEFAULT 'disponible' CHECK(estado_inventario IN ('disponible', 'poco_stock', 'no_disponible'))`);
         await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)`);
         await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS stock_reservado INTEGER DEFAULT 0`);
+
+        // ✅ NUEVO: Agregar columna de idioma a usuarios
+        await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS language VARCHAR(10) DEFAULT 'es'`);
 
         // Crear tabla de mesas
         await pool.query(`
@@ -271,6 +276,21 @@ async function initDatabase() {
             console.log('Nota: No se pudo eliminar constraint de transacciones (puede que no exista o tenga otro nombre)');
         }
 
+        // ✅ NUEVO: Tabla de suscripciones push
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT REFERENCES usuarios(id) ON DELETE CASCADE,
+                role TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                keys_p256dh TEXT NOT NULL,
+                keys_auth TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, endpoint)
+            )
+        `);
+
         // Crear tabla de configuración
         await pool.query(`
             CREATE TABLE IF NOT EXISTS configuracion (
@@ -334,6 +354,9 @@ app.use('/api/well-known', wellKnownRoutes); // ✅ Well-known dinámico
 
 // Rutas de administración de configuración (Categorías y Métodos de Pago)
 app.use('/api', configItemsRoutes);
+
+// ✅ NUEVO: Rutas de push notifications
+app.use('/api/push', pushRoutes);
 
 // ============= CONFIGURACIÓN =============
 app.get('/api/config', async (req, res) => {
@@ -412,9 +435,26 @@ io.on('connection', (socket) => {
     console.log('🔌 Cliente conectado:', socket.id);
 
     // Cliente solicita la cuenta - retransmitir al mesero
-    socket.on('solicitar_cuenta', (data) => {
+    socket.on('solicitar_cuenta', async (data) => {
         console.log('💳 Cuenta solicitada:', data);
         io.emit('solicitar_cuenta', data);
+
+        // ✅ NUEVO: Notificar al mesero via push
+        try {
+            if (data.usuario_mesero_id) {
+                await sendPushToUser(data.usuario_mesero_id,
+                    'bill_requested',
+                    'bill_requested_body',
+                    [data.mesa_numero],
+                    {
+                        url: '/',
+                        mesa: data.mesa_numero
+                    }
+                );
+            }
+        } catch (pushError) {
+            console.warn('⚠️ Push notification failed:', pushError);
+        }
     });
 
     socket.on('disconnect', () => {

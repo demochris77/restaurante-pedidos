@@ -231,4 +231,7 @@ export default {
   uploadMenuImage: (formData) => api.post('/upload/menu-image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+
+  // ✅ NUEVO: Update user language preference
+  updateUserLanguage: (userId, language) => api.put(`/users/${userId}/language`, { language }),
 };

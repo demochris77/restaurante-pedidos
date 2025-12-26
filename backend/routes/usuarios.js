@@ -67,4 +67,27 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// PUT /api/users/:id/language - Update user language preference
+router.put('/:id/language', async (req, res) => {
+    try {
+        const { language } = req.body;
+        const userId = req.params.id;
+
+        if (!language || !['es', 'en'].includes(language)) {
+            return res.status(400).json({ error: 'Invalid language. Must be "es" or "en"' });
+        }
+
+        await pool.query(
+            'UPDATE usuarios SET language = $1 WHERE id = $2',
+            [language, userId]
+        );
+
+        console.log(`✅ Updated language for user ${userId}: ${language}`);
+        res.json({ success: true, language });
+    } catch (error) {
+        console.error('Error updating language:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;

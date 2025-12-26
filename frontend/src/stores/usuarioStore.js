@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import api from '../api';
+import { subscribeToPush } from '../utils/pushSubscription'; // ✅ NUEVO
 
 export const useUsuarioStore = defineStore('usuario', () => {
     const usuario = ref(null);
@@ -14,6 +15,25 @@ export const useUsuarioStore = defineStore('usuario', () => {
             const response = await api.login(username, password);
             usuario.value = response.data;
             localStorage.setItem('usuario', JSON.stringify(response.data));
+
+            // ✅ NUEVO: Subscribe to push notifications
+            try {
+                await subscribeToPush(response.data.usuario.id, response.data.usuario.rol);
+                console.log('✅ Subscribed to push notifications');
+            } catch (pushError) {
+                console.warn('⚠️ Push subscription failed:', pushError);
+                // No bloqueamos el login si falla el push
+            }
+
+            // ✅ NUEVO: Sync language preference with backend
+            try {
+                const userLanguage = localStorage.getItem('i18n_locale') || 'es';
+                await api.updateUserLanguage(response.data.usuario.id, userLanguage);
+                console.log(`✅ Language synced: ${userLanguage}`);
+            } catch (langError) {
+                console.warn('⚠️ Language sync failed:', langError);
+            }
+
             return response.data;
         } catch (err) {
             error.value = err.response?.data?.error || 'Error al iniciar sesión';

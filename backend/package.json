@@ -25,6 +25,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "thermal-printer": "^1.0.5",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "web-push": "^3.6.7"
   }
 }
