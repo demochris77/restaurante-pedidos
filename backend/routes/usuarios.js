@@ -77,7 +77,7 @@ router.put('/:id/language', async (req, res) => {
             return res.status(400).json({ error: 'Invalid language. Must be "es" or "en"' });
         }
 
-        await pool.query(
+        await runAsync(
             'UPDATE usuarios SET language = $1 WHERE id = $2',
             [language, userId]
         );

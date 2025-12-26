@@ -76,6 +76,17 @@ export function useNotificaciones(rol) {
             // Ignorar error de vibración
         }
 
+        try {
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+        } catch (err) {
+            // Ignorar error de vibración
+        }
+
+        // ✅ MODIFICADO: Ya no mostramos notificación nativa aquí para evitar duplicidad
+        // con las Push Notifications del Service Worker.
+        /* 
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('🍽️ Restaurante POS', {
                 body: titulo,
@@ -83,6 +94,7 @@ export function useNotificaciones(rol) {
                 badge: '/favicon.ico'
             });
         }
+        */
     };
 
     // Cerrar notificación manualmente
@@ -159,24 +171,27 @@ export function useNotificaciones(rol) {
             });
         }
         else if (rol === 'mesero') {
+            // Obtener usuario actual del localStorage (o store si prefieres)
+            const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+
             // ✅ AGREGAR ESTO: Listener para solicitud de cuenta
             socket.on('solicitar_cuenta', (data) => {
-                // Obtener usuario actual del localStorage (o store si prefieres)
-                const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-
                 // Verificar si la solicitud es para este mesero
                 if (usuario.id && String(data.mesero_id) === String(usuario.id)) {
                     mostrarNotificacion(
                         `cuenta-${data.pedido_id}`, // ID único
                         `💳 Mesa ${data.mesa_numero}: Solicitan la cuenta`, // Mensaje
-                        'pago' // Tipo (usamos 'pago' para que salga con icono de dinero)
+                        'info'
                     );
                 }
             });
 
+            // Notificación cuando un item está listo
             socket.on('item_ready', (data) => {
-                const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-                if (usuario.id && String(data.mesero_id) === String(usuario.id)) {
+                console.log('🔔 Item listo recibido:', data);
+
+                // ✅ FILTRO: Solo notificar si el usuario es el mesero asignado Y NO es item directo
+                if (usuario.id && data.mesero_id === usuario.id && !data.es_directo) {
                     mostrarNotificacion(
                         `item_listo_${data.item_id}`,
                         `✅ ${data.item_nombre} listo (Mesa ${data.mesa_numero})`,

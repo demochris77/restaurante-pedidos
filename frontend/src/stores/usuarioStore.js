@@ -18,17 +18,17 @@ export const useUsuarioStore = defineStore('usuario', () => {
 
             // ✅ NUEVO: Subscribe to push notifications
             try {
-                await subscribeToPush(response.data.usuario.id, response.data.usuario.rol);
+                // response.data es directamente el objeto usuario {id, username, nombre, rol}
+                await subscribeToPush(response.data.id, response.data.rol);
                 console.log('✅ Subscribed to push notifications');
             } catch (pushError) {
                 console.warn('⚠️ Push subscription failed:', pushError);
-                // No bloqueamos el login si falla el push
             }
 
             // ✅ NUEVO: Sync language preference with backend
             try {
                 const userLanguage = localStorage.getItem('i18n_locale') || 'es';
-                await api.updateUserLanguage(response.data.usuario.id, userLanguage);
+                await api.updateUserLanguage(response.data.id, userLanguage);
                 console.log(`✅ Language synced: ${userLanguage}`);
             } catch (langError) {
                 console.warn('⚠️ Language sync failed:', langError);

@@ -25,10 +25,27 @@ self.addEventListener('push', event => {
     };
 
     event.waitUntil(
-        self.registration.showNotification(
-            data.title || '🍽️ Restaurante POS',
-            options
-        )
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(clientList => {
+                // Check if app is open and visible
+                const isAppVisible = clientList.some(client =>
+                    client.url.includes(self.registration.scope) &&
+                    'visibilityState' in client &&
+                    client.visibilityState === 'visible'
+                );
+
+                // Assuming in-app notifications (Toast) handle the visible case,
+                // we suppress the system notification if app is visible.
+                if (isAppVisible) {
+                    console.log('👀 App is visible, suppressing system notification');
+                    return;
+                }
+
+                return self.registration.showNotification(
+                    data.title || '🍽️ Restaurante POS',
+                    options
+                );
+            })
     );
 });
 
