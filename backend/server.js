@@ -276,6 +276,19 @@ async function initDatabase() {
             console.log('Nota: No se pudo eliminar constraint de transacciones (puede que no exista o tenga otro nombre)');
         }
 
+        // 🔄 MIGRACIONES AUTOMÁTICAS: CORRECCIÓN DE FOREIGN KEYS (CASCADE DELETE)
+        try {
+            // Esto permite borrar items del menú aunque estén en pedidos antiguos
+            await pool.query(`ALTER TABLE pedido_items DROP CONSTRAINT IF EXISTS pedido_items_menu_item_id_fkey`);
+            await pool.query(`
+                ALTER TABLE pedido_items 
+                ADD CONSTRAINT pedido_items_menu_item_id_fkey 
+                FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE
+            `);
+        } catch (e) {
+            console.log('Nota: Migración FK pedido_items (ya existe o error):', e.message);
+        }
+
         // ✅ NUEVO: Tabla de suscripciones push
         await pool.query(`
             CREATE TABLE IF NOT EXISTS push_subscriptions (

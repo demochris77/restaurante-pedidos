@@ -8,15 +8,16 @@ const router = express.Router();
 // GET /api/menu - Obtener todos los items del menú
 router.get('/', async (req, res) => {
     try {
-        // ✅ NUEVO: Check cache first (5 min TTL)
+        // ✅ Check cache (5 min TTL)
         const cached = getFromCache('menu_items', 300000);
         if (cached) {
             return res.json(cached);
         }
 
-        // ✅ OPTIMIZED: Select only necessary columns (no descripcion, created_at, updated_at)
+        // ✅ COALESCE para manejar ambas columnas de tiempo
         const items = await allAsync(`
-            SELECT id, nombre, categoria, precio, tiempo_preparacion_min, 
+            SELECT id, nombre, categoria, precio, 
+                   COALESCE(tiempo_estimado, tiempo_preparacion_min, 15) as tiempo_estimado, 
                    disponible, usa_inventario, stock_actual, stock_minimo,
                    estado_inventario, es_directo, 
                    COALESCE(NULLIF(image_url, ''), imagen_url) as image_url
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
             ORDER BY categoria, nombre
         `);
 
-        // ✅ NUEVO: Cache the result
+        // ✅ Cache result
         setCache('menu_items', items);
 
         res.json(items);
@@ -44,12 +45,13 @@ router.post('/', async (req, res) => {
         }
 
         const id = uuidv4();
+        // Insertamos en AMBAS columnas para evitar inconsistencias
         const query = `
             INSERT INTO menu_items(
-                id, nombre, categoria, precio, tiempo_estimado, disponible, descripcion,
+                id, nombre, categoria, precio, tiempo_estimado, tiempo_preparacion_min, disponible, descripcion,
                 usa_inventario, stock_actual, stock_minimo, estado_inventario, es_directo, image_url
             )
-        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES($1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             `;
 
         await runAsync(query, [
@@ -57,65 +59,76 @@ router.post('/', async (req, res) => {
             nombre,
             categoria,
             precio,
-            tiempo_estimado || 15,
+            tiempo_estimado || 15, // Se usa para ambas columnas ($5)
             disponible !== false,
             descripcion || null,
             usa_inventario || false,
             stock_actual || null,
             stock_minimo || null,
             estado_inventario || 'disponible',
-            es_directo || false, // ✅ Nuevo campo
-            image_url || null // ✅ NUEVO
+            es_directo || false,
+            image_url || null
         ]);
 
-        res.json({
-            id,
-            nombre,
-            categoria,
-            precio,
-            tiempo_estimado: tiempo_estimado || 15,
-            disponible: disponible !== false,
-            descripcion,
-            usa_inventario: usa_inventario || false,
-            stock_actual,
-            stock_minimo,
-            estado_inventario: estado_inventario || 'disponible',
-            es_directo: es_directo || false,
-            message: '✓ Item agregado'
-        });
+        // 🧹 Limpiar caché para refrescar menú
+        clearCache('menu_items');
+
+        res.json({ message: '✓ Item agregado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 // PUT /api/menu/:id - Actualizar item del menú
+// PUT /api/menu/:id - Actualizar item del menú (Parcial o Completo)
 router.put('/:id', async (req, res) => {
     try {
-        const { nombre, categoria, precio, tiempo_estimado, disponible, descripcion, usa_inventario, stock_actual, stock_minimo, estado_inventario, es_directo, image_url } = req.body;
+        const id = req.params.id;
+        const updates = req.body;
 
-        const query = `
-            UPDATE menu_items 
-            SET nombre = $1, categoria = $2, precio = $3, tiempo_estimado = $4,
-            disponible = $5, descripcion = $6, usa_inventario = $7,
-            stock_actual = $8, stock_minimo = $9, estado_inventario = $10, es_directo = $11, image_url = $12
-            WHERE id = $13
-            `;
+        // Mapeo seguro de campos permitidos
+        // frontend_field -> db_column
+        const fieldMap = {
+            'nombre': 'nombre',
+            'categoria': 'categoria',
+            'precio': 'precio',
+            'tiempo_estimado': 'tiempo_estimado', // Prioridad
+            'disponible': 'disponible',
+            'descripcion': 'descripcion',
+            'usa_inventario': 'usa_inventario',
+            'stock_actual': 'stock_actual',
+            'stock_minimo': 'stock_minimo',
+            'estado_inventario': 'estado_inventario',
+            'es_directo': 'es_directo',
+            'image_url': 'image_url'
+        };
 
-        await runAsync(query, [
-            nombre,
-            categoria,
-            precio,
-            tiempo_estimado,
-            disponible,
-            descripcion,
-            usa_inventario,
-            stock_actual,
-            stock_minimo,
-            estado_inventario,
-            es_directo || false, // ✅ Nuevo campo
-            image_url || null, // ✅ NUEVO
-            req.params.id
-        ]);
+        const allowedKeys = Object.keys(fieldMap);
+        const keysToUpdate = Object.keys(updates).filter(k => allowedKeys.includes(k));
+
+        if (keysToUpdate.length === 0) {
+            return res.status(400).json({ error: 'No se enviaron campos válidos' });
+        }
+
+        // Construir query dinámica: SET db_col=$1, db_col2=$2 ...
+        let setClause = keysToUpdate.map((k, i) => `${fieldMap[k]} = $${i + 1}`).join(', ');
+        const values = keysToUpdate.map(k => updates[k]);
+
+        // Hack: Si viene tiempo_estimado, agregamos tiempo_preparacion_min a la query manualmente
+        if (updates.tiempo_estimado) {
+            setClause += `, tiempo_preparacion_min = $${values.length + 1}`;
+            values.push(updates.tiempo_estimado); // Valor duplicado
+        }
+
+        // Agregar ID al final de los valores
+        values.push(id);
+
+        const query = `UPDATE menu_items SET ${setClause} WHERE id = $${values.length}`;
+
+        await runAsync(query, values);
+
+        // 🧹 Limpiar caché
+        clearCache('menu_items');
 
         res.json({ message: '✓ Item actualizado' });
     } catch (error) {
@@ -128,6 +141,10 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         await runAsync('DELETE FROM menu_items WHERE id = $1', [req.params.id]);
+
+        // 🧹 Limpiar caché
+        clearCache('menu_items');
+
         res.json({ message: '✓ Item eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message });

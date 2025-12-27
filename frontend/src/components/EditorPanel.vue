@@ -154,7 +154,22 @@
               <div v-for="item in items" :key="item.id" class="item-card">
                 <div class="item-card-header">
                   <input v-model="item.nombre" class="edit-input title-input" @change="actualizarItem(item)" />
-                  <button @click="eliminarItem(item.id)" class="btn-icon delete" title="Eliminar">🗑️</button>
+                  <!-- Botones de Acción -->
+                  <div class="action-buttons-row">
+                    <!-- Toggle Disponibilidad (Ojo) -->
+                    <button 
+                      @click="toggleDisponibilidad(item)" 
+                      class="btn-icon" 
+                      :class="{ 'btn-eye-active': item.disponible, 'btn-eye-off': !item.disponible }"
+                      :title="item.disponible ? 'Desactivar (Ocultar)' : 'Activar (Mostrar)'"
+                    >
+                      {{ item.disponible ? '👁️' : '🚫' }}
+                    </button>
+
+                    <!-- Eliminar (con warning) -->
+                    <div v-if="deletingId === item.id" class="delete-spinner">⏳</div>
+                    <button v-else @click="eliminarItem(item.id)" class="btn-icon delete" title="Eliminar Definitivamente">🗑️</button>
+                  </div>
                 </div>
 
                 <div class="item-card-body">
@@ -790,13 +805,37 @@ const actualizarItem = async (item) => {
   }
 };
 
+const toggleDisponibilidad = async (item) => {
+  const nuevoEstado = !item.disponible;
+  try {
+    // Actualizamos localmente para feedback inmediato
+    item.disponible = nuevoEstado;
+    await api.updateMenuItem(item.id, { disponible: nuevoEstado });
+  } catch (err) {
+    console.error(err);
+    alert('Error al cambiar disponibilidad');
+    item.disponible = !nuevoEstado; // Revertir
+  }
+};
+
+const deletingId = ref(null);
+
 const eliminarItem = async (id) => {
-  if (!confirm('¿Eliminar este plato del menú?')) return;
+  const mensaje = `⚠️ ADVERTENCIA CRÍTICA ⚠️\n\nSi eliminas este plato, desaparecerá de TODOS los reportes históricos de ventas.\n\n¿Estás SEGURO de que quieres eliminarlo?\n(Recomendamos usar el botón 'Ojo' para solo ocultarlo)`;
+  
+  if (!confirm(mensaje)) return;
+  if (!confirm('¿De verdad? Esta acción no se puede deshacer.')) return;
+  
+  deletingId.value = id; 
   try {
     await api.deleteMenuItem(id);
-    await cargarMenu();
+    menuItems.value = menuItems.value.filter(i => i.id !== id);
   } catch (err) {
-    alert('Error al eliminar');
+    console.error(err);
+    alert('Error al eliminar: ' + (err.response?.data?.error || err.message));
+    await cargarMenu();
+  } finally {
+    deletingId.value = null;
   }
 };
 
@@ -1048,6 +1087,32 @@ onMounted(() => {
   color: #4b5563;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.list-.action-buttons-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-eye-active {
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.btn-eye-off {
+  background-color: #fee2e2;
+  border-radius: 4px;
+  padding: 4px 8px;
+  opacity: 0.8;
+}
+
+.item-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .list-item-row {
