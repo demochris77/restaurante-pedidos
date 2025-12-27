@@ -18,7 +18,12 @@ router.get('/', async (req, res) => {
 // POST /api/users - Crear nuevo usuario
 router.post('/', async (req, res) => {
     try {
-        const { username, password, nombre, rol } = req.body;
+        let { username, password, nombre, rol } = req.body;
+
+        // ✅ NORMALIZACIÓN: Facturero es lo mismo que Cajero
+        if (rol === 'facturero') {
+            rol = 'cajero';
+        }
 
         if (!username || !password || !nombre || !rol) {
             return res.status(400).json({ error: 'Todos los campos son requeridos' });
