@@ -1165,4 +1165,26 @@ router.put('/:id/items/:itemId/cantidad', async (req, res) => {
     }
 });
 
+// ✅ NUEVO: Actualizar notas de un item existente
+router.put('/items/:itemId/notas', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { notas } = req.body;
+
+        await runAsync('UPDATE pedido_items SET notas = $1 WHERE id = $2', [notas, itemId]);
+
+        // Notificar que hubo un cambio (opcional, para que cocina lo vea si es relevante)
+        // Obtenemos info para el socket
+        const item = await getAsync('SELECT pedido_id, estado FROM pedido_items WHERE id = $1', [itemId]);
+        if (item) {
+            req.app.get('io').emit('item_actualizado', { id: itemId, pedido_id: item.pedido_id, estado: item.estado, notas });
+            // También podríamos emitir 'pedido_actualizado' si queremos refrescar todo
+        }
+
+        res.json({ message: 'Notas actualizadas' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;

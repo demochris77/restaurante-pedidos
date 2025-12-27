@@ -302,6 +302,17 @@
             </div>
             <div class="item-edicion-acciones">
               <span class="item-precio">${{ item.precio_unitario }}</span>
+              
+              <!-- ✅ NUEVO: Split item existente -->
+              <button 
+                v-if="['pendiente','en_preparacion'].includes(item.estado) && item.cantidad > 1"
+                @click="dividirItemEnEdicion(item)" 
+                class="btn-split-mini"
+                title="Dividir item"
+              >
+                ✂️
+              </button>
+
               <button 
                 v-if="['pendiente','en_preparacion','listo','servido'].includes(item.estado)"
                 @click="eliminarItemDelPedido(item)" 
@@ -311,7 +322,18 @@
                 🗑️
               </button>
               <span v-else class="item-no-editable">🔒</span>
-
+            </div>
+            
+            <!-- ✅ NUEVO: Notas editable para items existentes -->
+            <div class="item-edicion-notas" style="width: 100%; margin-top: 4px;">
+                 <textarea
+                  v-model="item.notas"
+                  @change="guardarNotasItem(item)"
+                  placeholder="Notas..."
+                  class="item-notas-input mini"
+                  rows="1"
+                  :disabled="!['pendiente','en_preparacion'].includes(item.estado)"
+                ></textarea>
             </div>
           </div>
         </div>
@@ -374,9 +396,22 @@
         <!-- Items pendientes de agregar -->
         <div v-if="itemsParaAgregar.length > 0" class="items-pendientes-agregar">
           <h5>{{ $t('waiter.items_to_add') }}</h5>
-          <div v-for="(item, idx) in itemsParaAgregar" :key="idx" class="item-pendiente">
-            <span>{{ item.cantidad }}x {{ item.nombre }} - ${{ (item.cantidad * item.precio_unitario).toFixed(2) }}</span>
-            <button @click="quitarItemPendiente(idx)" class="btn-quitar">✕</button>
+          <div v-for="(item, idx) in itemsParaAgregar" :key="idx" class="item-pendiente-row">
+            <div class="item-pendiente-info">
+               <span>{{ item.cantidad }}x {{ item.nombre }} - ${{ (item.cantidad * item.precio_unitario).toFixed(2) }}</span>
+               <div class="acc-groups">
+                   <!-- ✅ NUEVO: Split agregados -->
+                   <button v-if="item.cantidad > 1" @click="desagruparItemAgregado(idx)" class="btn-split-mini">✂️</button>
+                   <button @click="quitarItemPendiente(idx)" class="btn-quitar">✕</button>
+               </div>
+            </div>
+            <!-- ✅ NUEVO: Notas para items agregados -->
+            <textarea
+                v-model="item.notas"
+                placeholder="Notas..."
+                class="item-notas-input mini"
+                rows="1"
+            ></textarea>
           </div>
           <button 
             @click="confirmarAgregarItems" 
@@ -982,6 +1017,43 @@ const confirmarAgregarItems = async () => {
     alert(t('common.error'));
   } finally {
     agregandoItems.value = false;
+  }
+};
+
+// ✅ NUEVO: Guardar notas de item existente
+const guardarNotasItem = async (item) => {
+    try {
+        await pedidoStore.actualizarNotasItem(item.id, item.notas);
+    } catch (err) {
+        alert(t('common.error'));
+    }
+};
+
+// ✅ NUEVO: Dividir item existente
+const dividirItemEnEdicion = async (item) => {
+    if (!confirm(t('common.are_you_sure'))) return;
+    
+    try {
+        await pedidoStore.dividirItem(item.id);
+        
+        // Refrescar pedido para ver el nuevo item
+        const response = await api.getPedido(pedidoEditando.value.id);
+        pedidoEditando.value = response.data;
+    } catch (err) {
+        console.error(err);
+        alert(t('common.error'));
+    }
+};
+
+// ✅ NUEVO: Desagrupar item nuevo (antes de agregar)
+const desagruparItemAgregado = (idx) => {
+  const item = itemsParaAgregar.value[idx];
+  if (item.cantidad > 1) {
+    item.cantidad--;
+    
+    // Crear copia con 1 y sin notas
+    const individual = { ...item, cantidad: 1, notas: '' };
+    itemsParaAgregar.value.splice(idx + 1, 0, individual);
   }
 };
 

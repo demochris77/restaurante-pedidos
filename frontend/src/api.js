@@ -125,6 +125,16 @@ export default {
     return api.put(`/pedidos/items/${id}/serve`);
   },
 
+  // ✅ NUEVO: Actualizar notas
+  actualizarNotasItem(id, notas) {
+    return api.put(`/pedidos/items/${id}/notas`, { notas });
+  },
+
+  // ✅ NUEVO: Dividir item
+  dividirItem(id) {
+    return api.post(`/pedidos/items/${id}/split`);
+  },
+
   // ============= EDICIÓN DE PEDIDOS =============
   agregarItemsAPedido(pedidoId, items) {
     return api.post(`/pedidos/${pedidoId}/items`, { items });

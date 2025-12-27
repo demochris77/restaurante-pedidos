@@ -190,6 +190,27 @@ export const usePedidoStore = defineStore('pedido', () => {
         return estados;
     });
 
+    // ✅ NUEVO: Actualizar notas
+    const actualizarNotasItem = async (itemId, notas) => {
+        try {
+            await api.items.updateNotes(itemId, notas);
+        } catch (err) {
+            console.error('Error updating notes:', err);
+            throw err;
+        }
+    };
+
+    // ✅ NUEVO: Dividir item
+    const dividirItem = async (itemId) => {
+        try {
+            await api.items.split(itemId);
+            // El socket actualizará la lisat
+        } catch (err) {
+            console.error('Error splitting item:', err);
+            throw err;
+        }
+    };
+
     return {
         pedidos,
         menu,
@@ -202,6 +223,8 @@ export const usePedidoStore = defineStore('pedido', () => {
         crearPedido,
         actualizarEstadoPedido,
         actualizarEstadoItem,
+        actualizarNotasItem,
+        dividirItem,
         pedidosPorEstado,
         iniciarRealTime // Exportar acción
     };
