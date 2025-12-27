@@ -31,6 +31,9 @@ export default defineConfig(({ mode }) => {
       }),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest', // ✅ Usar modo inyección
+        srcDir: 'src',                // ✅ Carpeta fuente
+        filename: 'sw.js',            // ✅ Nombre del archivo
         manifest: {
           name: env.VITE_APP_TITLE,
           short_name: env.VITE_APP_SHORT_NAME,

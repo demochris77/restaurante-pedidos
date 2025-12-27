@@ -29,6 +29,12 @@ export function useNotificaciones(rol) {
     const reproducirSonido = () => {
         try {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // ✅ Fix: Intentar reanudar si está suspendido (política de autoplay)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().catch(() => { });
+            }
+
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 

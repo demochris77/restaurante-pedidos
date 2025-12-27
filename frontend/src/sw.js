@@ -1,7 +1,13 @@
-// Service Worker for Push Notifications
-// This runs in the background even when the app is closed
+// Service Worker for Push Notifications and Caching
+// ✅ Workbox Injection Point
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 
-console.log('🔧 Service Worker loaded');
+cleanupOutdatedCaches()
+
+// self.__WB_MANIFEST is injected by VitePWA build process
+precacheAndRoute(self.__WB_MANIFEST)
+
+console.log('🔧 Service Worker loaded with Workbox');
 
 // Listen for push events from the server
 self.addEventListener('push', event => {
