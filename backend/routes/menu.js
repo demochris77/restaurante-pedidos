@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
         const items = await allAsync(`
             SELECT id, nombre, categoria, precio, 
                    COALESCE(tiempo_estimado, tiempo_preparacion_min, 15) as tiempo_estimado, 
-                   disponible, usa_inventario, stock_actual, stock_minimo,
+                   disponible, descripcion, usa_inventario, stock_actual, stock_minimo,
                    estado_inventario, es_directo, 
                    COALESCE(NULLIF(image_url, ''), imagen_url) as image_url
             FROM menu_items 
