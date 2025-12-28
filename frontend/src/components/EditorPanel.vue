@@ -253,7 +253,8 @@
 
                   <!-- Control de Stock Rápido -->
                   <div v-if="item.usa_inventario" class="stock-control">
-                    <input v-model.number="item.stock_actual" type="number" class="stock-input" @change="actualizarItem(item)" placeholder="#" />
+                    <input v-model.number="item.stock_actual" type="number" class="stock-input" @change="actualizarItem(item)" placeholder="Stock" title="Stock Actual" />
+                    <input v-model.number="item.stock_minimo" type="number" class="stock-input" @change="actualizarItem(item)" placeholder="Min" title="Stock Mínimo" style="width: 60px;" />
                     <select v-model="item.estado_inventario" class="stock-select" @change="actualizarItem(item)">
                       <option value="disponible">✅ {{ $t('editor.stock.available') }}</option>
                       <option value="poco_stock">⚠️ {{ $t('editor.stock.low') }}</option>
