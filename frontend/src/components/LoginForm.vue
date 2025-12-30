@@ -123,10 +123,10 @@ const handleLogin = async () => {
 
   try {
     const success = await usuarioStore.login(username.value, password.value);
+    const success = await usuarioStore.login(username.value, password.value);
+    // Login success logic handled in store (redirection, etc.) or parent
     if (success) {
-        try {
-            await subscribeToPush();
-        } catch(e) { console.error("Push error", e); }
+       // Optional: additional success logic
     }
   } catch (err) {
     error.value = usuarioStore.error || t('common.error');

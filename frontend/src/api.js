@@ -18,7 +18,7 @@ const getApiUrl = () => {
   } else {
     // Modo Online: Usar URL de producción (Render)
     console.log('☁️ Modo Online detectado: Conectando a backend remoto');
-    return import.meta.env.VITE_API_URL || 'https://restaurante-pedidos-backend.onrender.com/api';
+    return import.meta.env.VITE_API_URL;
   }
 };
 

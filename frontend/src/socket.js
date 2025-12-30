@@ -13,7 +13,7 @@ const getSocketUrl = () => {
         console.log('🔌 Socket Local: Usando Proxy Vite');
         return '';
     } else {
-        return import.meta.env.VITE_SOCKET_URL || 'https://restaurante-pedidos-backend.onrender.com';
+        return import.meta.env.VITE_SOCKET_URL;
     }
 };
 

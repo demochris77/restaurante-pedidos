@@ -28,6 +28,11 @@ function urlBase64ToUint8Array(base64String) {
  */
 export async function subscribeToPush(userId, role) {
     try {
+        if (!userId || !role) {
+            console.warn('⚠️ Cannot subscribe to push: Missing userId or role');
+            return null;
+        }
+
         // Check if browser supports notifications
         if (!('Notification' in window)) {
             console.warn('Browser does not support notifications');
