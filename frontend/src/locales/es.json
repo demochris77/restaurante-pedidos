@@ -418,5 +418,54 @@
         "cart_total": "Total",
         "notes": "Notas",
         "notes_placeholder": "Ej: Sin cebolla, aderezo aparte..."
+    },
+    "inventory": {
+        "title": "Inventario y Materia Prima",
+        "subtitle": "Gestiona el stock de insumos para tus recetas",
+        "search_placeholder": "Buscar insumo...",
+        "new_item": "Nuevo Insumo",
+        "edit_item": "Editar Insumo",
+        "name": "Nombre",
+        "stock_current": "Stock Actual",
+        "stock_min": "Stock Mínimo",
+        "cost_unit": "Costo / Und",
+        "status": "Estado",
+        "actions": "Acciones",
+        "no_items": "No hay insumos registrados.",
+        "form": {
+            "name_label": "Nombre del Insumo",
+            "name_placeholder": "Ej. Carne de Res, Papas...",
+            "unit_label": "Unidad de Medida",
+            "cost_label": "Costo Unitario ($)",
+            "stock_current_label": "Stock Actual",
+            "stock_min_label": "Stock Mínimo (Alerta)",
+            "save_changes": "Guardar Cambios",
+            "create_item": "Crear Insumo",
+            "adjust_stock": "Ajustar Stock",
+            "adjust_qty_label": "Cantidad a ajustar",
+            "add": "Agregar",
+            "subtract": "Quitar",
+            "units": {
+                "kg": "Kilogramos (kg)",
+                "g": "Gramos (g)",
+                "l": "Litros (l)",
+                "ml": "Mililitros (ml)",
+                "unid": "Unidades",
+                "oz": "Onzas",
+                "lb": "Libras"
+            }
+        },
+        "status_label": {
+            "out": "AGOTADO",
+            "low": "BAJO",
+            "ok": "OK"
+        },
+        "alerts": {
+            "confirm_delete": "¿Seguro que deseas eliminar {name}?",
+            "delete_error": "No se puede eliminar (probablemente esté en uso en una receta)",
+            "save_error": "Error guardando item",
+            "invalid_qty": "Cantidad inválida",
+            "stock_error": "Error actualizando stock"
+        }
     }
 }

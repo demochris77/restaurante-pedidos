@@ -1,275 +1,407 @@
-/* =========================================
-   LAYOUT & GENERAL
-   ========================================= */
+/* AdminUsers Premium Styles */
 .admin-users {
     padding: 24px;
-    max-width: 1400px;
-    /* Aumentado para aprovechar pantallas anchas */
+    max-width: 1200px;
     width: 100%;
     margin: 0 auto;
-    box-sizing: border-box;
     font-family: 'Inter', sans-serif;
 }
 
-.header {
+/* Header Premium */
+.header-premium {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    padding: 20px 24px;
+    margin-bottom: 32px;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.text-indigo {
+    color: #4f46e5;
+    background: #e0e7ff;
+    padding: 10px;
     border-radius: 12px;
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
-}
-
-.header h2 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-}
-
-.btn-volver {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background 0.2s;
-}
-
-.btn-volver:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-/* =========================================
-   SECCIONES
-   ========================================= */
-.section {
-    background: white;
-    padding: 32px;
-    /* Más padding interno */
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e5e7eb;
-    margin-bottom: 24px;
-    width: 100%;
+    height: 48px;
+    width: 48px;
     box-sizing: border-box;
 }
 
-.section h3 {
-    margin-top: 0;
-    color: #1f2937;
-    font-size: 18px;
-    font-weight: 700;
-    border-bottom: 2px solid #f3f4f6;
-    padding-bottom: 16px;
-    margin-bottom: 24px;
+.header-title h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.025em;
 }
 
-/* =========================================
-   FORMULARIO DE CREACIÓN (RESPONSIVE GRID)
-   ========================================= */
-.create-form {
-    display: grid;
-    /* 
-     Magia Responsive: 
-     Crea columnas automáticas que tengan mínimo 250px de ancho.
-     Si hay espacio, caben 4. Si no, bajan a 2 o 1.
-  */
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    align-items: end;
-    /* Alinea el botón con los inputs */
+.subtitle {
+    margin: 4px 0 0 0;
+    color: #64748b;
+    font-size: 0.95rem;
 }
 
-/* Elimina los .form-row antiguos, ya no son necesarios con el grid */
-.form-group {
+.btn-secondary-outline {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #475569;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary-outline:hover {
+    background: #f8fafc;
+    color: #1e293b;
+    border-color: #94a3b8;
+}
+
+/* Premium Card */
+.premium-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0;
+    padding: 24px;
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.icon-bg {
+    width: 36px;
+    height: 36px;
+    background: #eff6ff;
+    color: #3b82f6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
     gap: 8px;
 }
 
+.badge-count {
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+/* Animations */
+.fade-in-up {
+    animation: fadeInUp 0.4s ease-out forwards;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.delay-100 {
+    animation-delay: 0.1s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Form Styles */
+.create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
 .form-group label {
-    font-size: 14px;
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
     font-weight: 600;
-    color: #374151;
+    color: #475569;
 }
 
-.form-group input,
-.form-group select {
-    padding: 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: border-color 0.2s;
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.field-icon {
+    position: absolute;
+    left: 12px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.input-with-icon input,
+.input-with-icon select {
     width: 100%;
-    box-sizing: border-box;
+    padding: 10px 12px 10px 40px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #1e293b;
+    transition: all 0.2s;
+    background: #f8fafc;
 }
 
-.form-group input:focus,
-.form-group select:focus {
-    border-color: #6366f1;
+.input-with-icon input:focus,
+.input-with-icon select:focus {
+    background: white;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     outline: none;
 }
 
-.btn-crear {
-    background: #10b981;
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
     color: white;
     border: none;
     padding: 12px 24px;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
-    height: 45px;
-    /* Para alinear altura con inputs */
     display: flex;
     align-items: center;
-    justify-content: center;
-    white-space: nowrap;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
 }
 
-.btn-crear:hover:not(:disabled) {
-    background: #059669;
+.btn-primary:hover:not(:disabled) {
     transform: translateY(-1px);
+    box-shadow: 0 6px 10px -1px rgba(79, 70, 229, 0.3);
 }
 
-.btn-crear:disabled {
-    opacity: 0.6;
+.btn-primary:disabled {
+    opacity: 0.7;
     cursor: not-allowed;
 }
 
-/* =========================================
-   TABLA DE USUARIOS
-   ========================================= */
-.table-container {
-    width: 100%;
+/* Table Styles */
+.table-responsive {
     overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
 }
 
-table {
+.premium-table {
     width: 100%;
-    border-collapse: collapse;
-    min-width: 600px;
-    /* Evita que se aplaste demasiado */
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
-th {
-    background: #f9fafb;
+.premium-table th {
+    background: #f8fafc;
+    color: #64748b;
     font-weight: 600;
-    color: #4b5563;
     text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: 0.05em;
-    padding: 16px;
+    font-size: 0.75rem;
+    padding: 12px 16px;
+    border-bottom: 2px solid #e2e8f0;
     text-align: left;
-    border-bottom: 1px solid #e5e7eb;
 }
 
-td {
+.premium-table td {
     padding: 16px;
-    border-bottom: 1px solid #e5e7eb;
-    color: #1f2937;
-    font-size: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    font-size: 0.9rem;
+    vertical-align: middle;
 }
 
-tr:last-child td {
+.premium-table tr:last-child td {
     border-bottom: none;
 }
 
-tr:hover {
-    background: #f9fafb;
+.premium-table tr:hover td {
+    background: #f8fafc;
 }
 
-/* =========================================
-   BADGES Y ACCIONES
-   ========================================= */
+.text-right {
+    text-align: right;
+}
+
+.font-medium {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.username-tag {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-family: monospace;
+}
+
+/* Roles Badges */
 .rol-badge {
     padding: 4px 10px;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: 0.8rem;
     font-weight: 600;
-    text-transform: uppercase;
-    display: inline-block;
+    text-transform: capitalize;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .rol-badge.admin {
-    background: #fee2e2;
-    color: #991b1b;
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
 }
 
 .rol-badge.mesero {
-    background: #e0e7ff;
-    color: #3730a3;
+    background: #eff6ff;
+    color: #3b82f6;
+    border: 1px solid #bfdbfe;
 }
 
 .rol-badge.cocinero {
-    background: #ffedd5;
-    color: #9a3412;
+    background: #fff7ed;
+    color: #f97316;
+    border: 1px solid #fed7aa;
 }
 
 .rol-badge.facturero,
 .rol-badge.cajero {
-    background: #d1fae5;
-    color: #065f46;
+    background: #ecfdf5;
+    color: #10b981;
+    border: 1px solid #a7f3d0;
 }
 
-.btn-delete {
-    background: #fee2e2;
-    border: none;
+/* Buttons */
+.btn-icon.delete {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #94a3b8;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 16px;
-    color: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s;
 }
 
-.btn-delete:hover {
-    background: #fecaca;
-    transform: scale(1.1);
+.btn-icon.delete:hover {
+    background: #fef2f2;
+    color: #ef4444;
+    border-color: #fca5a5;
+    transform: translateY(-2px);
 }
 
-/* =========================================
-   ESTADOS VACÍOS Y CARGA
-   ========================================= */
-.loading,
-.empty {
+/* States */
+.loading-state,
+.empty-state {
+    padding: 48px;
     text-align: center;
-    padding: 40px;
-    color: #6b7280;
-    font-weight: 500;
-    background: #f9fafb;
-    border-radius: 8px;
-    border: 1px dashed #d1d5db;
+    color: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
 }
 
-/* =========================================
-   RESPONSIVE
-   ========================================= */
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
 @media (max-width: 768px) {
-    .admin-users {
-        padding: 16px;
-    }
-
-    .header {
+    .header-premium {
         flex-direction: column;
-        gap: 12px;
-        align-items: stretch;
-        text-align: center;
+        align-items: flex-start;
+        gap: 16px;
     }
 
-    .create-form {
-        grid-template-columns: 1fr;
-        /* En móvil, una sola columna */
-    }
-
-    .btn-crear {
+    .btn-secondary-outline {
         width: 100%;
+        justify-content: center;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .premium-table th:nth-child(2),
+    .premium-table td:nth-child(2) {
+        display: none;
+        /* Hide username on small screens if needed */
     }
 }

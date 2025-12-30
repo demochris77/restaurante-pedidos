@@ -417,5 +417,54 @@
         "notes_placeholder": "Ex: No onions, sauce on side...",
         "customize_btn": "Customize",
         "remove_btn": "Remove"
+    },
+    "inventory": {
+        "title": "Inventory & Raw Materials",
+        "subtitle": "Manage stock for your recipes",
+        "search_placeholder": "Search item...",
+        "new_item": "New Item",
+        "edit_item": "Edit Item",
+        "name": "Name",
+        "stock_current": "Current Stock",
+        "stock_min": "Min Stock",
+        "cost_unit": "Cost / Unit",
+        "status": "Status",
+        "actions": "Actions",
+        "no_items": "No items registered.",
+        "form": {
+            "name_label": "Item Name",
+            "name_placeholder": "Ex. Beef, Potatoes...",
+            "unit_label": "Unit of Measure",
+            "cost_label": "Unit Cost ($)",
+            "stock_current_label": "Current Stock",
+            "stock_min_label": "Min Stock (Alert)",
+            "save_changes": "Save Changes",
+            "create_item": "Create Item",
+            "adjust_stock": "Adjust Stock",
+            "adjust_qty_label": "Quantity to adjust",
+            "add": "Add",
+            "subtract": "Remove",
+            "units": {
+                "kg": "Kilograms (kg)",
+                "g": "Grams (g)",
+                "l": "Liters (l)",
+                "ml": "Milliliters (ml)",
+                "unid": "Units",
+                "oz": "Ounces",
+                "lb": "Pounds"
+            }
+        },
+        "status_label": {
+            "out": "OUT OF STOCK",
+            "low": "LOW",
+            "ok": "OK"
+        },
+        "alerts": {
+            "confirm_delete": "Are you sure you want to delete {name}?",
+            "delete_error": "Cannot delete (likely used in a recipe)",
+            "save_error": "Error saving item",
+            "invalid_qty": "Invalid quantity",
+            "stock_error": "Error updating stock"
+        }
     }
 }

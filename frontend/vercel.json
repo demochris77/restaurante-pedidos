@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/.well-known/(.*)",
-      "destination": "http://localhost:3000/api/well-known/$1"
+      "destination": "http://192.168.1.204:3000/api/well-known/$1"
     },
     {
       "source": "/api/(.*)",
-      "destination": "http://localhost:3000/api/$1"
+      "destination": "http://192.168.1.204:3000/api/$1"
     },
     {
       "source": "/(.*)",
