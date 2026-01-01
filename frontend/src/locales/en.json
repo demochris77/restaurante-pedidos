@@ -249,6 +249,7 @@
         "back_to_order_status": "Back to Status",
         "confirm_payment": "Confirm Payment",
         "ready_to_pay_confirm": "Confirm this order is ready to pay?",
+        "note_for_cashier": "Note for cashier (optional)",
         "delete_item": "Delete Item",
         "confirm_delete_item": "Delete \"{name}\" from order?",
         "cancel_order": "Cancel Order",

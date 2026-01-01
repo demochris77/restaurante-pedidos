@@ -527,7 +527,7 @@
         <p class="confirm-message">{{ $t('waiter.ready_to_pay_confirm') }}</p>
         
         <div class="note-field-wrapper">
-          <label class="input-label">📝 Nota para cajero (opcional)</label>
+          <label class="input-label">{{ $t('waiter.note_for_cashier') }}</label>
           <textarea
             v-model="notaPago"
             placeholder="Ej: 'Pagaron $50.000 en efectivo', 'Dividir cuenta en 2'"

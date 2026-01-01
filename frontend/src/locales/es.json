@@ -251,6 +251,7 @@
         "back_to_order_status": "Volver al Estado",
         "confirm_payment": "Confirmar Pago",
         "ready_to_pay_confirm": "¿Confirmar que este pedido está listo para pagar?",
+        "note_for_cashier": "Nota para cajero (opcional)",
         "delete_item": "Eliminar Item",
         "confirm_delete_item": "¿Eliminar \"{name}\" del pedido?",
         "cancel_order": "Cancelar Pedido",

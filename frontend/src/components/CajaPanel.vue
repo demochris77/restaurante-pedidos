@@ -331,6 +331,7 @@ import CajaPaymentForm from './CajaPaymentForm.vue';
 import api from '../api';
 import socket from '../socket';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { 
   Wallet, User, Clock, RefreshCw, Receipt, CheckCircle2, History,
   Banknote, Printer, CreditCard, Smartphone, Banknote as CashIcon, Globe, Eye, ArrowLeft, X
@@ -340,6 +341,8 @@ import {
 const usuarioStore = useUsuarioStore();
 const pedidoStore = usePedidoStore(); // Usamos el store para mantener consistencia si se quiere
 const { t } = useI18n(); // Uso de i18n
+const router = useRouter();
+
 // Inicializar notificaciones para rol cajero/facturero
 const { notificaciones } = useNotificaciones('facturero'); 
 const loading = ref(false);
@@ -563,9 +566,9 @@ const cerrarConfirmacionDevolver = () => {
 };
 
 const verCuenta = (pedido) => {
-  const baseUrl = window.location.origin;
-  const url = `${baseUrl}/cuenta/${pedido.id}`;
-  window.open(url, '_blank');
+  if (!pedido.id) return;
+  // Navigate in same tab - CuentaView will detect mesero login and show back button to panel
+  router.push(`/cuenta/${pedido.id}`);
 };
 
 const imprimirCuenta = async (pedido) => {
