@@ -584,6 +584,29 @@
     </div>
   </div>
 
+  <!-- Confirmation Modal for Cancel Order -->
+  <div v-if="mostrarConfirmacionCancelar" class="modal-overlay" @click.self="mostrarConfirmacionCancelar = false">
+    <div class="modal-content small-modal">
+      <div class="modal-header-clean">
+        <h3>{{ $t('waiter.cancel_order') }}</h3>
+        <button @click="mostrarConfirmacionCancelar = false" class="btn-close-clean"><X :size="20" /></button>
+      </div>
+      
+      <div class="modal-body-clean">
+        <p class="confirm-message">{{ confirmacionCancelarMensaje }}</p>
+        
+        <div class="modal-actions-row">
+          <button @click="mostrarConfirmacionCancelar = false" class="btn-secondary-action large">
+            {{ $t('common.no') }}
+          </button>
+          <button @click="confirmarCancelarPedido" class="btn-primary-action large danger">
+            {{ $t('common.yes') }} <Trash2 :size="18" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   </div>
 </template>
 
@@ -646,6 +669,11 @@ const grupoParaServir = ref(null);
 const mostrarConfirmacionEliminar = ref(false);
 const confirmacionEliminarMensaje = ref('');
 const itemParaEliminar = ref(null);
+
+// Cancel order confirmation
+const mostrarConfirmacionCancelar = ref(false);
+const confirmacionCancelarMensaje = ref('');
+const pedidoParaCancelar = ref(null);
 
 // Computed para items del menú en el editor
 const itemsPorCategoriaEdicion = computed(() => {
@@ -1096,11 +1124,27 @@ const verCuenta = (pedidoId) => {
 };
 
 const cancelarPedido = async (pedidoId) => {
-  if (!confirm(t('waiter.confirm_cancel'))) return;
+  const pedido = pedidoStore.pedidos.find(p => p.id === pedidoId);
+  const mesaNumero = pedido ? pedido.mesa_numero : '';
+  
+  confirmacionCancelarMensaje.value = t('waiter.confirm_cancel_order', { table: mesaNumero });
+  pedidoParaCancelar.value = pedidoId;
+  mostrarConfirmacionCancelar.value = true;
+};
+
+const confirmarCancelarPedido = async () => {
+  mostrarConfirmacionCancelar.value = false;
+  
+  if (!pedidoParaCancelar.value) return;
+  
   try {
-    await pedidoStore.actualizarEstadoPedido(pedidoId, 'cancelado');
+    await pedidoStore.actualizarEstadoPedido(pedidoParaCancelar.value, 'cancelado');
+    mostrarNotificacion('success', t('waiter.alert_cancelled'));
   } catch (e) {
+    console.error('Error cancelando pedido:', e);
     alert(t('common.error'));
+  } finally {
+    pedidoParaCancelar.value = null;
   }
 };
 

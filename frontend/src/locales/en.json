@@ -263,7 +263,9 @@
         "confirm_payment": "Confirm Payment",
         "ready_to_pay_confirm": "Confirm this order is ready to pay?",
         "delete_item": "Delete Item",
-        "confirm_delete_item": "Delete \"{name}\" from order?"
+        "confirm_delete_item": "Delete \"{name}\" from order?",
+        "cancel_order": "Cancel Order",
+        "confirm_cancel_order": "Cancel order from table {table}?"
     },
     "cashier": {
         "title": "Cashier Panel",

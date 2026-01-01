@@ -265,7 +265,9 @@
         "confirm_payment": "Confirmar Pago",
         "ready_to_pay_confirm": "¿Confirmar que este pedido está listo para pagar?",
         "delete_item": "Eliminar Item",
-        "confirm_delete_item": "¿Eliminar \"{name}\" del pedido?"
+        "confirm_delete_item": "¿Eliminar \"{name}\" del pedido?",
+        "cancel_order": "Cancelar Pedido",
+        "confirm_cancel_order": "¿Cancelar el pedido de la mesa {table}?"
     },
     "cashier": {
         "title": "Panel de Caja",
