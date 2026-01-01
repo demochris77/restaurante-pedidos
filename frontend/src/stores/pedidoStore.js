@@ -88,7 +88,7 @@ export const usePedidoStore = defineStore('pedido', () => {
         }
     };
 
-    const actualizarEstadoPedido = async (id, estado) => {
+    const actualizarEstadoPedido = async (id, estado, notas = null) => {
         // Optimistic Update: Actualizar localmente primero para velocidad
         const pedidoIndex = pedidos.value.findIndex(p => p.id === id);
         const pedidoOriginal = pedidoIndex !== -1 ? { ...pedidos.value[pedidoIndex] } : null;
@@ -101,10 +101,14 @@ export const usePedidoStore = defineStore('pedido', () => {
             } else {
                 pedidos.value[pedidoIndex].estado = estado;
             }
+            // Update notes locally if provided
+            if (notas !== null) {
+                pedidos.value[pedidoIndex].notas = notas;
+            }
         }
 
         try {
-            await api.actualizarEstadoPedido(id, estado);
+            await api.actualizarEstadoPedido(id, estado, notas);
             // Ya no recargamos todo 'cargarPedidosActivos()'. El socket se encargará si hay cambios externos.
         } catch (err) {
             // Rollback en caso de error

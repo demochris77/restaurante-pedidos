@@ -286,6 +286,7 @@
         "bill": "Cuenta",
         "pay": "Pagar",
         "view": "Ver Detalles",
+        "view_bill": "Ver Cuenta",
         "payment_details": "Detalles del Pago",
         "tip": "Propina",
         "tip_options": {

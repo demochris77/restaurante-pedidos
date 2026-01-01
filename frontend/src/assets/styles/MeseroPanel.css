@@ -2083,6 +2083,29 @@
   min-width: 100px;
 }
 
+/* Responsive for modals */
+@media (max-width: 768px) {
+  .small-modal {
+    max-width: 90vw;
+    width: auto;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-body-clean {
+    padding: 1rem;
+  }
+
+  .modal-header-clean {
+    padding: 1rem;
+  }
+
+  .confirm-message {
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+  }
+}
+
 .small-modal {
   max-width: 400px;
 }

@@ -235,7 +235,7 @@
                        <span class="time-badge mini">
                          <Clock :size="10" /> {{ calcularTiempoDesde(item.tiempoDesdeReady) }}
                        </span>
-                       <button @click="marcarItemComoServido(item.item_id)" class="btn-icon-action check" title="Servir">
+                       <button @click="marcarItemComoServido(item.item_ids[0])" class="btn-icon-action check" title="Servir">
                           <Check :size="14" />
                        </button>
                     </div>
@@ -547,7 +547,7 @@
       </div>
       
       <div class="modal-body-clean">
-        <p class="confirm-message">{{ confirmacionServirMensaje }}</p>
+        <p class="confirm-message">{{ $t('waiter.confirm_serve_all', { table: mesaParaServir?.mesa, count: mesaParaServir?.items.length }) }}</p>
         
         <div class="modal-actions-row">
           <button @click="mostrarConfirmacionServir = false" class="btn-secondary-action large">
@@ -914,7 +914,7 @@ const misItemsListos = computed(() => {
 
         if (!itemsAgrupados[key]) {
           itemsAgrupados[key] = {
-            item_id: item.id,
+            item_ids: [], // ✅ Array to store ALL item IDs
             pedido_id: pedido.id,
             mesa_numero: pedido.mesa_numero,
             nombre: item.nombre,
@@ -924,6 +924,8 @@ const misItemsListos = computed(() => {
             tiempoDesdeReady: minutosDinámicos 
           };
         }
+        // ✅ Add this item's ID to the array
+        itemsAgrupados[key].item_ids.push(item.id);
         itemsAgrupados[key].cantidad_lista++;
         // To show max time waiting
         if (minutosDinámicos > itemsAgrupados[key].tiempoDesdeReady) {
@@ -1063,7 +1065,9 @@ const marcarItemComoServido = async (itemId) => {
 // ✅ NUEVO: Servir mesa completa
 const servirMesa = async (grupo) => {
   console.log('🔘 servirMesa clicked for grupo:', grupo);
-  const itemIds = grupo.items.map(i => i.item_id);
+  
+  // ✅ Flatten all item_ids from all grouped items
+  const itemIds = grupo.items.flatMap(i => i.item_ids);
   console.log('📋 Item IDs to serve:', itemIds);
   
   if (itemIds.length === 0) {
@@ -1085,7 +1089,8 @@ const confirmarServirMesa = async () => {
     return;
   }
   
-  const itemIds = grupoParaServir.value.items.map(i => i.item_id);
+  // ✅ Flatten all item_ids from all grouped items
+  const itemIds = grupoParaServir.value.items.flatMap(i => i.item_ids);
   console.log('🚀 Calling api.servirItemsBatch with:', itemIds);
   
   try {
@@ -1109,10 +1114,13 @@ const marcarListoPagar = async (pedidoId) => {
 const confirmarListoPagar = async () => {
   if (!pedidoParaPagar.value) return;
   try {
-    await pedidoStore.actualizarEstadoPedido(pedidoParaPagar.value, 'listo_pagar');
+    // ✅ Send the note along with the status update
+    await pedidoStore.actualizarEstadoPedido(pedidoParaPagar.value, 'listo_pagar', notaPago.value || null);
     mostrarNotificacion(`listo-pagar-${pedidoParaPagar.value}`, t('waiter.ready_to_pay'), 'success');
     mostrarConfirmacionPago.value = false;
+    notaPago.value = ''; // Clear note after sending
   } catch (e) {
+    console.error('Error marcando listo para pagar:', e);
     alert(t('common.error'));
   }
 };

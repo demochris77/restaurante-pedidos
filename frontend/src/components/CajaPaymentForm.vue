@@ -241,6 +241,29 @@
         {{ $t('cashier.cancel') }}
       </button>
     </div>
+
+    <!-- Confirmation Modal -->
+    <div v-if="mostrarConfirmacion" class="modal-overlay" @click.self="mostrarConfirmacion = false">
+      <div class="modal-content small-modal">
+        <div class="modal-header-clean">
+          <h3>{{ $t('cashier.confirm_payment') }}</h3>
+          <button @click="mostrarConfirmacion = false" class="btn-close-clean">×</button>
+        </div>
+        
+        <div class="modal-body-clean">
+          <p class="confirm-message">{{ mensajeConfirmacion }}</p>
+          
+          <div class="modal-actions-row">
+            <button @click="mostrarConfirmacion = false" class="btn-secondary-action large">
+              {{ $t('common.no') }}
+            </button>
+            <button @click="confirmarPago" class="btn-primary-action large success">
+              {{ $t('common.yes') }} <CheckCircle2 :size="18" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -385,6 +408,11 @@ const propinaPersonalizada = ref(null);
 const procesandoPago = ref(false);
 const inputMonto = ref(null);
 
+// Confirmation modal state
+const mostrarConfirmacion = ref(false);
+const mensajeConfirmacion = ref('');
+const accionPendiente = ref(null);
+
 // Icons helper
 const getIcon = (name) => {
     const n = name.toLowerCase();
@@ -481,8 +509,25 @@ const getPropinaFinal = () => {
 const procesarPago = async () => {
   if (!metodoSeleccionado.value) return;
 
-  const confirmado = confirm(t('cashier.confirm_payment_prompt'));
-  if (!confirmado) return;
+  // Show confirmation modal
+  mensajeConfirmacion.value = t('cashier.confirm_payment_prompt');
+  accionPendiente.value = 'pago_unico';
+  mostrarConfirmacion.value = true;
+};
+
+const confirmarPago = async () => {
+  mostrarConfirmacion.value = false;
+  
+  if (accionPendiente.value === 'pago_unico') {
+    await ejecutarPagoUnico();
+  } else if (accionPendiente.value === 'pago_multiple') {
+    await ejecutarPagoMultiple();
+  }
+  
+  accionPendiente.value = null;
+};
+
+const ejecutarPagoUnico = async () => {
 
   procesandoPago.value = true;
   
@@ -546,10 +591,14 @@ const procesarPago = async () => {
 const procesarPagoMultiple = async () => {
     const pendienteActual = totalAPagar.value;
     
-    // Confirmación general para pago múltiple
-    if (!confirm(`¿Confirmar pago múltiple por un total de $${Math.round(totalIngresadoMultiple.value).toLocaleString()}?`)) {
-        return;
-    }
+    // Show confirmation modal
+    mensajeConfirmacion.value = `¿Confirmar pago múltiple por un total de $${Math.round(totalIngresadoMultiple.value).toLocaleString()}?`;
+    accionPendiente.value = 'pago_multiple';
+    mostrarConfirmacion.value = true;
+};
+
+const ejecutarPagoMultiple = async () => {
+    const pendienteActual = totalAPagar.value;
     
     if (Math.abs(restanteMultiple.value) > 100 && restanteMultiple.value > 0) {
         if(!confirm(`⚠️ El monto total ($${totalIngresadoMultiple.value}) es MENOR al pendiente. ¿Registrar como pago parcial?`)) {

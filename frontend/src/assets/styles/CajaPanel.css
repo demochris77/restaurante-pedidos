@@ -227,6 +227,64 @@
     color: var(--text-primary);
 }
 
+/* Order Notes */
+.order-notes {
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--theme-color, var(--c-primary));
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.notes-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+}
+
+.notes-text {
+    color: var(--text-primary);
+    font-style: italic;
+}
+
+/* Billing Actions */
+.billing-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    justify-content: flex-end;
+}
+
+.btn-action-icon {
+    background: var(--theme-color, var(--c-primary));
+    color: white;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+}
+
+.btn-action-icon:hover {
+    background: var(--theme-color-dark, var(--c-primary-dark));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-action-icon.warning {
+    background: var(--c-warning, #f59e0b);
+}
+
+.btn-action-icon.warning:hover {
+    background: #d97706;
+}
+
 /* Sidebar (Historial) */
 .history-sidebar {
     flex: 1;
@@ -779,10 +837,13 @@
 .btn-primary-action {
     background: var(--c-primary);
     color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary-action:hover {
     background: var(--c-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary-action.warning {
@@ -793,6 +854,14 @@
     background: #d97706;
 }
 
+.btn-primary-action.success {
+    background: #16a34a;
+}
+
+.btn-primary-action.success:hover {
+    background: #15803d;
+}
+
 .btn-secondary-action.large,
 .btn-primary-action.large {
     min-width: 100px;
@@ -800,16 +869,28 @@
 
 /* Responsive for small modals */
 @media (max-width: 768px) {
-    .small-modal {
-        max-width: 90vw;
-        width: auto;
+
+    /* Override defaults for small modals */
+    .modal-content.small-modal {
+        max-width: 90vw !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: 80vh !important;
+        border-radius: 12px !important;
+        overflow-y: auto !important;
     }
 
-    .modal-body-clean {
-        padding: 1.25rem;
+    .small-modal .modal-body-clean {
+        padding: 1rem;
     }
 
-    .modal-header-clean {
-        padding: 1.25rem;
+    .small-modal .modal-header-clean {
+        padding: 1rem;
+    }
+
+
+    .confirm-message {
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
     }
 }

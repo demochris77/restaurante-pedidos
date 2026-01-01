@@ -71,9 +71,24 @@
                <span class="total-amount">${{ Math.round(pedido.total || 0).toLocaleString() }}</span>
             </div>
             
-            <button @click.stop="devolverPedido(pedido)" class="btn-return-order" :title="$t('cashier.return_order')">
-              <ArrowLeft :size="16" /> {{ $t('cashier.return') }}
-            </button>
+            <!-- Order Notes -->
+            <div v-if="pedido.notas" class="order-notes">
+              <span class="notes-label">📝 Nota:</span>
+              <span class="notes-text">{{ pedido.notas }}</span>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="billing-actions">
+              <button @click.stop="verCuenta(pedido)" class="btn-action-icon" :title="$t('cashier.view_bill')">
+                <Eye :size="18" />
+              </button>
+              <button @click.stop="imprimirCuenta(pedido)" class="btn-action-icon" :title="$t('cashier.print_bill')">
+                <Printer :size="18" />
+              </button>
+              <button @click.stop="devolverPedido(pedido)" class="btn-action-icon warning" :title="$t('cashier.return_order')">
+                <ArrowLeft :size="18" />
+              </button>
+            </div>
             
              <!-- Estado de pago parcial -->
             <div v-if="pedido.total_pagado > 0" class="text-success text-sm text-right">
@@ -545,6 +560,113 @@ const confirmarDevolver = async () => {
 const cerrarConfirmacionDevolver = () => {
   mostrarConfirmacionDevolver.value = false;
   pedidoParaDevolver.value = null;
+};
+
+const verCuenta = (pedido) => {
+  const baseUrl = window.location.origin;
+  const url = `${baseUrl}/cuenta/${pedido.id}`;
+  window.open(url, '_blank');
+};
+
+const imprimirCuenta = async (pedido) => {
+  try {
+    // Fetch full order details if needed
+    let orderData = pedido;
+    if (!pedido.items || pedido.items.length === 0) {
+      const response = await api.getPedido(pedido.id);
+      orderData = response.data;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Por favor permite ventanas emergentes para imprimir');
+      return;
+    }
+
+    const ticketData = prepararTicket(orderData, true, null, null); // esRegalo=true for bill without prices
+
+    const contenidoHTML = `
+    <html>
+    <head>
+      <title>${t('cashier.bill')} - ${import.meta.env.VITE_APP_TITLE}</title>
+      <style>
+        body { font-family: 'Courier New', monospace; width: 300px; margin: 0 auto; padding: 10px; font-size: 12px; }
+        .header { text-align: center; margin-bottom: 10px; }
+        .header h3 { margin: 0 0 5px 0; font-size: 16px; }
+        .header p { margin: 2px 0; }
+        .divider { border-top: 1px dashed black; margin: 8px 0; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .col-cant { width: 10%; }
+        .col-desc { width: 65%; }
+        .col-total { width: 25%; text-align: right; }
+        .total-section { font-size: 16px; font-weight: bold; margin-top: 10px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+        @media print { button { display: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h3>${import.meta.env.VITE_APP_TITLE.toUpperCase()}</h3>
+        <p>${t('ticket.date')}: ${new Date().toLocaleString()}</p>
+        <p>${t('common.table')}: ${ticketData.mesa}</p>
+        <div class="divider"></div>
+        <p>${t('cashier.bill')}</p>
+        <div class="divider"></div>
+      </div>
+
+      <div class="items">
+        <div class="row" style="font-weight:bold; border-bottom:1px solid black;">
+          <span class="col-cant">${t('ticket.qty')}</span>
+          <span class="col-desc">${t('ticket.desc')}</span>
+          <span class="col-total">${t('ticket.total')}</span>
+        </div>
+        ${ticketData.items.map(item => `
+          <div class="row">
+            <span class="col-cant">${item.cantidad}</span>
+            <span class="col-desc">${item.nombre}</span>
+            <span class="col-total">$${Math.round(item.cantidad * item.precio).toLocaleString()}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="total-section">
+        <div class="divider"></div>
+        <div class="row">
+          <span>${t('ticket.subtotal')}:</span>
+          <span>$${Math.round(ticketData.subtotal).toLocaleString()}</span>
+        </div>
+        ${ticketData.propinaMonto > 0 ? `
+        <div class="row">
+          <span>${t('ticket.tip')}:</span>
+          <span>$${Math.round(ticketData.propinaMonto).toLocaleString()}</span>
+        </div>
+        ` : ''}
+        <div class="divider"></div>
+        <div class="row" style="font-size: 18px;">
+          <span>${t('ticket.total').toUpperCase()}:</span>
+          <span>$${Math.round(ticketData.totalPedido).toLocaleString()}</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>${t('ticket.thanks')}</p>
+      </div>
+      
+      <script>
+        window.onload = function() {
+          window.print();
+        }
+      <\/script> 
+    <\/body>
+    <\/html>
+  `;
+
+    printWindow.document.write(contenidoHTML);
+    printWindow.document.close();
+  } catch (error) {
+    console.error('Error imprimiendo cuenta:', error);
+    alert('Error al imprimir la cuenta');
+  }
 };
 
 // --- Impresión ---

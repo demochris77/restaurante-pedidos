@@ -283,7 +283,8 @@
         "all_caught_up": "All caught up! No orders to pay.",
         "bill": "Bill",
         "pay": "Pay",
-        "view": "View",
+        "view": "View Details",
+        "view_bill": "View Bill",
         "payment_details": "Payment Details",
         "tip": "Tip",
         "tip_options": {
