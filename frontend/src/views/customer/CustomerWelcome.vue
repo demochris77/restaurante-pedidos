@@ -32,13 +32,13 @@ const router = useRouter();
 const pedidoStore = usePedidoStore();
 
 const tableId = computed(() => route.params.tableId);
-const restaurantName = ref('');
+const restaurantName = ref(import.meta.env.VITE_APP_TITLE || 'Restaurante');
 
 onMounted(async () => {
   try {
     const response = await api.getConfig();
-    if (response.data && response.data.name) {
-      restaurantName.value = response.data.name;
+    if (response.data) {
+      restaurantName.value = response.data.nombre || restaurantName.value;
     }
   } catch (error) {
     console.error('Error loading config:', error);
