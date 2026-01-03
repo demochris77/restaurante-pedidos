@@ -990,31 +990,43 @@ router.post('/:id/items', async (req, res) => {
 
         // Verificar que el pedido existe y no está en estado final
         const pedido = await getAsync('SELECT * FROM pedidos WHERE id = $1', [pedidoId]);
+        console.log('📦 Pedido encontrado:', pedido ? `Mesa ${pedido.mesa_numero}, Estado: ${pedido.estado}` : 'NO ENCONTRADO');
+
         if (!pedido) {
+            console.error('❌ Pedido no encontrado');
             return res.status(404).json({ error: 'Pedido no encontrado' });
         }
 
         if (['pagado', 'cancelado'].includes(pedido.estado)) {
+            console.error('❌ Pedido en estado final:', pedido.estado);
             return res.status(400).json({ error: 'No se puede editar un pedido pagado o cancelado' });
         }
 
         let totalAdicional = 0;
         const nuevosItems = [];
 
+        console.log('🔄 Procesando items...');
         for (const item of items) {
+            console.log(`  → Item: ${item.menu_item_id}, Cantidad: ${item.cantidad}, Precio: ${item.precio_unitario}`);
+
             const menuItemData = await getAsync(
                 'SELECT id, nombre, es_directo, usa_inventario, stock_actual, stock_reservado, stock_minimo, estado_inventario FROM menu_items WHERE id = $1',
                 [item.menu_item_id]
             );
 
             if (!menuItemData) {
+                console.error('❌ Item de menú no encontrado:', item.menu_item_id);
                 return res.status(400).json({ error: `Item de menú ${item.menu_item_id} no encontrado` });
             }
+            console.log(`  ✓ Menu item: ${menuItemData.nombre}`);
+
 
             // Verificar inventario (stock disponible = stock_actual - stock_reservado)
             if (menuItemData.usa_inventario) {
                 const stockDisponible = (menuItemData.stock_actual || 0) - (menuItemData.stock_reservado || 0);
+                console.log(`  📊 Stock check: ${menuItemData.nombre} - Disponible: ${stockDisponible}, Solicitado: ${item.cantidad}`);
                 if (stockDisponible < item.cantidad) {
+                    console.error(`❌ Stock insuficiente para ${menuItemData.nombre}`);
                     return res.status(400).json({
                         error: `Stock insuficiente para ${menuItemData.nombre}. Disponible: ${stockDisponible}`
                     });
