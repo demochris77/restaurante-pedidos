@@ -255,7 +255,7 @@
                       <ChevronDown :size="14" class="select-arrow" />
                     </div>
 
-                    <button v-if="!item.es_directo" @click="openRecipeModal(item)" class="btn-recipe">
+                    <button @click="openRecipeModal(item)" class="btn-recipe">
                       <ChefHat :size="14" /> {{ $t('editor.form.recipe_btn') }}
                     </button>
                   </div>
