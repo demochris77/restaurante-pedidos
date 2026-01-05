@@ -466,7 +466,7 @@
                     <span class="mini-name">{{ menuItem.nombre }}</span>
                     <span class="mini-price">${{ menuItem.precio }}</span>
                  </div>
-                 <div v-if="menuItem.usa_inventario && !menuItem.es_directo" class="mini-stock">
+                 <div v-if="menuItem.usa_inventario" class="mini-stock">
                     {{ getRemainingStockEdit(menuItem) }}
                  </div>
                  <div v-if="getRemainingStockEdit(menuItem) <= 0" class="mini-stock out">
