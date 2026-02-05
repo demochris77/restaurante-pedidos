@@ -19,6 +19,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
                     const user = await prisma.user.findFirst({
                         where: { username },
+                        include: { organization: true }
                     });
 
                     if (!user) return null;
@@ -29,6 +30,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         return {
                             ...user,
                             organizationId: user.organizationId ?? undefined,
+                            organizationSlug: user.organization?.slug,
                         };
                     }
                 }

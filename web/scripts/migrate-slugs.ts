@@ -9,7 +9,7 @@ async function main() {
     const orgsWithoutSlug = await prisma.organization.findMany({
         where: {
             OR: [
-                { slug: null },
+                { slug: null as any },
                 { slug: '' }
             ]
         },

@@ -44,7 +44,7 @@ export async function createMPSubscription(params: {
                         frequency: trialDays,
                         frequency_type: 'days'
                     } : undefined
-                },
+                } as any,
                 back_url: backUrl,
                 payer_email: userEmail,
                 external_reference: organizationId,

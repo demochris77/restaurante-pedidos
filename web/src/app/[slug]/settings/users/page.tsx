@@ -64,7 +64,7 @@ export default function UsersPage() {
     }
 
     const showWarning = limits && limits.users.percentage >= 80 && !limits.users.isUnlimited
-    const atLimit = limits && !limits.users.canAdd
+    const atLimit = limits ? !limits.users.canAdd : false
 
     return (
         <div className="space-y-6">

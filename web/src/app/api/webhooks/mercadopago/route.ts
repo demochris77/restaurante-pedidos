@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         // Check if this payment was already processed
         const existingSubscription = await prisma.subscription.findFirst({
             where: {
-                subscriptionId: payment.id?.toString(),
+                preapprovalId: payment.id?.toString(),
             },
         })
 
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
                     status: 'active',
                     paymentProvider: 'mercadopago',
                     customerId: payment.payer?.id?.toString() || null,
-                    subscriptionId: payment.id?.toString() || null,
+                    preapprovalId: payment.id?.toString() || null,
                     currentPeriodStart: new Date(),
                     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
                 },
@@ -316,10 +316,10 @@ async function handleSubscriptionPayment(data: any) {
         console.log('Subscription payment:', {
             id: payment.id,
             status: payment.status,
-            preapproval_id: payment.preapproval_id
+            preapproval_id: (payment as any).preapproval_id
         })
 
-        const preapprovalId = payment.preapproval_id
+        const preapprovalId = (payment as any).preapproval_id
 
         if (!preapprovalId) {
             console.log('No preapproval_id in payment')

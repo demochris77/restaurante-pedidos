@@ -45,7 +45,7 @@ async function main() {
     // Create tables
     let tablesCreated = 0
     for (let i = 1; i <= 12; i++) {
-        const existing = await prisma.table.findUnique({ where: { number: i } })
+        const existing = await prisma.table.findFirst({ where: { number: i, organizationId: null } })
         if (!existing) {
             await prisma.table.create({
                 data: {
