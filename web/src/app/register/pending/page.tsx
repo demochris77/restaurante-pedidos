@@ -23,27 +23,21 @@ function PendingContent() {
                         </div>
 
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4">
-                            Pago Pendiente
+                            {t('payment.pending.title')}
                         </h1>
 
                         <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                            Tu pago está siendo procesado. Te notificaremos por email cuando se complete.
+                            {t('payment.pending.subtitle')}
                         </p>
 
                         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 mb-8">
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-                                ¿Qué sigue?
+                                {t('payment.pending.whatNext')}
                             </h2>
                             <div className="text-left space-y-3 text-slate-600 dark:text-slate-300">
-                                <p>
-                                    • Si pagaste con transferencia bancaria o efectivo, el proceso puede tardar hasta 48 horas.
-                                </p>
-                                <p>
-                                    • Recibirás un email de confirmación cuando tu pago sea aprobado.
-                                </p>
-                                <p>
-                                    • Una vez aprobado, podrás iniciar sesión y comenzar a usar la plataforma.
-                                </p>
+                                <p>• {t('payment.pending.info1')}</p>
+                                <p>• {t('payment.pending.info2')}</p>
+                                <p>• {t('payment.pending.info3')}</p>
                             </div>
                         </div>
 
@@ -52,7 +46,7 @@ function PendingContent() {
                                 href="/"
                                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-bold rounded-lg transition-colors shadow-lg"
                             >
-                                Volver al Inicio
+                                {t('payment.pending.button')}
                             </Link>
                         </div>
                     </div>

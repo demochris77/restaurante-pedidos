@@ -185,6 +185,35 @@ const translations = {
         'pricing.starter.description': 'Perfecto para restaurantes pequeños',
         'pricing.professional.description': 'Ideal para restaurantes en crecimiento',
         'pricing.enterprise.description': 'Para cadenas y múltiples locales',
+
+        // Payment Success Page
+        'payment.success.title': '¡Pago Exitoso!',
+        'payment.success.subtitle': 'Tu cuenta ha sido creada exitosamente. Recibirás un email de confirmación en breve.',
+        'payment.success.steps': 'Próximos pasos',
+        'payment.success.step1': 'Tu organización ha sido creada',
+        'payment.success.step2': 'Tu usuario administrador está listo',
+        'payment.success.step3': 'Tu suscripción está activa',
+        'payment.success.message': 'Ya puedes iniciar sesión y comenzar a usar la plataforma',
+        'payment.success.button': 'Iniciar Sesión',
+
+        // Payment Cancel Page
+        'payment.cancel.title': 'Pago Cancelado',
+        'payment.cancel.subtitle': 'El proceso de pago fue cancelado. No se realizó ningún cargo.',
+        'payment.cancel.whatToDo': '¿Qué puedes hacer?',
+        'payment.cancel.option1': 'Puedes intentar nuevamente el proceso de registro',
+        'payment.cancel.option2': 'Si tuviste algún problema, contáctanos para ayudarte',
+        'payment.cancel.option3': 'Todos tus datos están seguros y no se guardó ninguna información de pago',
+        'payment.cancel.retry': 'Intentar Nuevamente',
+        'payment.cancel.home': 'Volver al Inicio',
+
+        // Payment Pending Page
+        'payment.pending.title': 'Pago Pendiente',
+        'payment.pending.subtitle': 'Tu pago está siendo procesado. Te notificaremos por email cuando se complete.',
+        'payment.pending.whatNext': '¿Qué sigue?',
+        'payment.pending.info1': 'Si pagaste con transferencia bancaria o efectivo, el proceso puede tardar hasta 48 horas.',
+        'payment.pending.info2': 'Recibirás un email de confirmación cuando tu pago sea aprobado.',
+        'payment.pending.info3': 'Una vez aprobado, podrás iniciar sesión y comenzar a usar la plataforma.',
+        'payment.pending.button': 'Volver al Inicio',
     },
     en: {
         // Navbar
@@ -358,6 +387,35 @@ const translations = {
         'pricing.starter.description': 'Perfect for small restaurants',
         'pricing.professional.description': 'Ideal for growing restaurants',
         'pricing.enterprise.description': 'For chains and multiple locations',
+
+        // Payment Success Page
+        'payment.success.title': 'Payment Successful!',
+        'payment.success.subtitle': 'Your account has been created successfully. You will receive a confirmation email shortly.',
+        'payment.success.steps': 'Next steps',
+        'payment.success.step1': 'Your organization has been created',
+        'payment.success.step2': 'Your admin user is ready',
+        'payment.success.step3': 'Your subscription is active',
+        'payment.success.message': 'You can now log in and start using the platform',
+        'payment.success.button': 'Sign In',
+
+        // Payment Cancel Page
+        'payment.cancel.title': 'Payment Canceled',
+        'payment.cancel.subtitle': 'The payment process was canceled. No charges were made.',
+        'payment.cancel.whatToDo': 'What can you do?',
+        'payment.cancel.option1': 'You can try the registration process again',
+        'payment.cancel.option2': 'If you had any issues, contact us for help',
+        'payment.cancel.option3': 'All your data is safe and no payment information was saved',
+        'payment.cancel.retry': 'Try Again',
+        'payment.cancel.home': 'Back to Home',
+
+        // Payment Pending Page
+        'payment.pending.title': 'Payment Pending',
+        'payment.pending.subtitle': 'Your payment is being processed. We will notify you by email when it completes.',
+        'payment.pending.whatNext': 'What\'s next?',
+        'payment.pending.info1': 'If you paid with bank transfer or cash, the process may take up to 48 hours.',
+        'payment.pending.info2': 'You will receive a confirmation email when your payment is approved.',
+        'payment.pending.info3': 'Once approved, you can log in and start using the platform.',
+        'payment.pending.button': 'Back to Home',
     }
 }
 

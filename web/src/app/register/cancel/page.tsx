@@ -23,27 +23,21 @@ function CancelContent() {
                         </div>
 
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4">
-                            Pago Cancelado
+                            {t('payment.cancel.title')}
                         </h1>
 
                         <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                            El proceso de pago fue cancelado. No se realizó ningún cargo.
+                            {t('payment.cancel.subtitle')}
                         </p>
 
                         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 mb-8">
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-                                ¿Qué puedes hacer?
+                                {t('payment.cancel.whatToDo')}
                             </h2>
                             <div className="text-left space-y-3 text-slate-600 dark:text-slate-300">
-                                <p>
-                                    • Puedes intentar nuevamente el proceso de registro
-                                </p>
-                                <p>
-                                    • Si tuviste algún problema, contáctanos para ayudarte
-                                </p>
-                                <p>
-                                    • Todos tus datos están seguros y no se guardó ninguna información de pago
-                                </p>
+                                <p>• {t('payment.cancel.option1')}</p>
+                                <p>• {t('payment.cancel.option2')}</p>
+                                <p>• {t('payment.cancel.option3')}</p>
                             </div>
                         </div>
 
@@ -52,13 +46,13 @@ function CancelContent() {
                                 href="/register"
                                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-bold rounded-lg transition-colors shadow-lg"
                             >
-                                Intentar Nuevamente
+                                {t('payment.cancel.retry')}
                             </Link>
                             <Link
                                 href="/"
                                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white font-bold rounded-lg transition-colors"
                             >
-                                Volver al Inicio
+                                {t('payment.cancel.home')}
                             </Link>
                         </div>
                     </div>
