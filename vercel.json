@@ -1,5 +1,9 @@
 {
-    "buildCommand": "prisma generate && next build",
-    "rootDirectory": "web",
-    "installCommand": "npm install"
+    "version": 2,
+    "builds": [
+        {
+            "src": "web/package.json",
+            "use": "@vercel/next"
+        }
+    ]
 }
