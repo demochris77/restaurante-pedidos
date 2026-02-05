@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { PublicNavbar } from '@/components/public/navbar'
 import { PublicFooter } from '@/components/public/footer'
 import { Container } from '@/components/ui/container'
@@ -7,7 +8,7 @@ import { useLanguage } from '@/components/providers/language-provider'
 import { XCircle } from 'lucide-react'
 import Link from 'next/link'
 
-export default function RegisterCancelPage() {
+function CancelContent() {
     const { t } = useLanguage()
 
     return (
@@ -22,20 +23,28 @@ export default function RegisterCancelPage() {
                         </div>
 
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4">
-                            Registro Cancelado
+                            Pago Cancelado
                         </h1>
 
                         <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                            El proceso de pago fue cancelado. No se realizó ningún cargo a tu tarjeta.
+                            El proceso de pago fue cancelado. No se realizó ningún cargo.
                         </p>
 
                         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 mb-8">
-                            <p className="text-slate-600 dark:text-slate-300 mb-4">
-                                ¿Tuviste algún problema durante el proceso de pago?
-                            </p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Puedes intentar nuevamente o contactarnos si necesitas ayuda.
-                            </p>
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
+                                ¿Qué puedes hacer?
+                            </h2>
+                            <div className="text-left space-y-3 text-slate-600 dark:text-slate-300">
+                                <p>
+                                    • Puedes intentar nuevamente el proceso de registro
+                                </p>
+                                <p>
+                                    • Si tuviste algún problema, contáctanos para ayudarte
+                                </p>
+                                <p>
+                                    • Todos tus datos están seguros y no se guardó ninguna información de pago
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -47,7 +56,7 @@ export default function RegisterCancelPage() {
                             </Link>
                             <Link
                                 href="/"
-                                className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold rounded-lg transition-colors"
+                                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white font-bold rounded-lg transition-colors"
                             >
                                 Volver al Inicio
                             </Link>
@@ -58,5 +67,13 @@ export default function RegisterCancelPage() {
 
             <PublicFooter />
         </div>
+    )
+}
+
+export default function RegisterCancelPage() {
+    return (
+        <Suspense fallback={<div>Cargando...</div>}>
+            <CancelContent />
+        </Suspense>
     )
 }

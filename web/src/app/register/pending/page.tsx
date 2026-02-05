@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { PublicNavbar } from '@/components/public/navbar'
 import { PublicFooter } from '@/components/public/footer'
 import { Container } from '@/components/ui/container'
@@ -7,7 +8,7 @@ import { useLanguage } from '@/components/providers/language-provider'
 import { Clock } from 'lucide-react'
 import Link from 'next/link'
 
-export default function RegisterPendingPage() {
+function PendingContent() {
     const { t } = useLanguage()
 
     return (
@@ -60,5 +61,13 @@ export default function RegisterPendingPage() {
 
             <PublicFooter />
         </div>
+    )
+}
+
+export default function RegisterPendingPage() {
+    return (
+        <Suspense fallback={<div>Cargando...</div>}>
+            <PendingContent />
+        </Suspense>
     )
 }
