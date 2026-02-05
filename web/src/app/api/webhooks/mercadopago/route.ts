@@ -58,20 +58,45 @@ export async function POST(request: NextRequest) {
         // Extract metadata from payment
         const metadata = payment.metadata as any
 
-        if (!metadata || !metadata.plan || !metadata.slug) {
-            console.error('Missing metadata in payment:', payment.id)
+        console.log('Payment metadata:', JSON.stringify(metadata, null, 2))
+
+        if (!metadata) {
+            console.error('No metadata in payment:', payment.id)
             return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
         }
 
-        const {
+        // Extract fields - Mercado Pago might nest them differently
+        const plan = metadata.plan
+        const restaurantName = metadata.restaurant_name || metadata.restaurantName
+        const slug = metadata.slug
+        const contactEmail = metadata.contact_email || metadata.contactEmail
+        const adminName = metadata.admin_name || metadata.adminName
+        const username = metadata.username
+        const password = metadata.password
+
+        console.log('Extracted metadata:', {
             plan,
             restaurantName,
             slug,
             contactEmail,
             adminName,
             username,
-            password,
-        } = metadata
+            hasPassword: !!password
+        })
+
+        if (!plan || !slug || !restaurantName || !username || !password) {
+            console.error('Missing required metadata fields:', {
+                plan: !!plan,
+                slug: !!slug,
+                restaurantName: !!restaurantName,
+                username: !!username,
+                password: !!password
+            })
+            return NextResponse.json({
+                error: 'Missing required metadata fields',
+                details: { plan: !!plan, slug: !!slug, restaurantName: !!restaurantName }
+            }, { status: 400 })
+        }
 
         const selectedPlan = MERCADOPAGO_PLANS[plan as PlanType]
 
