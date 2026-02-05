@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         // Check if this payment was already processed
         const existingSubscription = await prisma.subscription.findFirst({
             where: {
-                stripeSubscriptionId: payment.id?.toString(), // We reuse this field for MP payment ID
+                subscriptionId: payment.id?.toString(),
             },
         })
 
@@ -137,8 +137,9 @@ export async function POST(request: NextRequest) {
                     organizationId: organization.id,
                     plan,
                     status: 'active',
-                    stripeCustomerId: payment.payer?.id?.toString() || null, // Reuse for MP payer ID
-                    stripeSubscriptionId: payment.id?.toString() || null, // Reuse for MP payment ID
+                    paymentProvider: 'mercadopago',
+                    customerId: payment.payer?.id?.toString() || null,
+                    subscriptionId: payment.id?.toString() || null,
                     currentPeriodStart: new Date(),
                     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
                 },

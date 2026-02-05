@@ -285,15 +285,17 @@ model Subscription {
   id                   String   @id @default(uuid())
   organizationId       String   @unique @map("organization_id")
   plan                 String   // starter, professional, enterprise
-  status               String   @default("active") // active, cancelled, expired, trialing
-  stripeCustomerId     String?  @map("stripe_customer_id")
-  stripeSubscriptionId String?  @map("stripe_subscription_id")
+  status               String   // active, canceled, past_due
+  paymentProvider      String   @default("mercadopago") @map("payment_provider") // mercadopago, stripe, etc
+  customerId           String?  @map("customer_id") // Payment provider customer ID
+  subscriptionId       String?  @map("subscription_id") // Payment provider subscription/payment ID
   currentPeriodStart   DateTime @map("current_period_start")
   currentPeriodEnd     DateTime @map("current_period_end")
+  cancelAtPeriodEnd    Boolean  @default(false) @map("cancel_at_period_end")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
-  
-  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@map("subscriptions")
 }
