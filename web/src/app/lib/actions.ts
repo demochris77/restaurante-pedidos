@@ -52,3 +52,18 @@ export async function switchAccount(
         throw error
     }
 }
+
+
+
+export async function googleAuthenticate() {
+    try {
+        await signIn('google')
+    } catch (error) {
+        // Signin can fail for all sorts of reasons
+        // But the redirect is thrown as an error, so we need to rethrow it
+        if (error instanceof AuthError) {
+            return 'Google Sign In failed.'
+        }
+        throw error
+    }
+}

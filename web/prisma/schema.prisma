@@ -53,17 +53,24 @@ model Organization {
 
 model User {
   id             String   @id @default(uuid())
-  username       String   
-  password       String
-  name           String   @map("nombre")
-  role           String   @map("rol") // admin, mesero, cocinero, cajero
+  username       String?  @unique // Optional for OAuth users
+  password       String?  // Optional for OAuth users
+  name           String?  @map("nombre")
+  email          String?  @unique
+  emailVerified  DateTime? @map("email_verified")
+  image          String?
+  role           String   @default("user") @map("rol") // admin, mesero, cocinero, cajero
   language       String?  @default("es")
   switchToken    String?  @unique @map("switch_token") // For seamless account switching
   createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
   
   // Organization (SaaS)
   organizationId String?  @map("organization_id") // Optional for migration, enforce later
   organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // Auth Rel
+  accounts       Account[]
 
   // Relationships
   orders         Order[]  @relation("WaiterOrders") // Orders taken by this waiter
@@ -71,6 +78,26 @@ model User {
   pushSubscriptions PushSubscription[]
 
   @@map("usuarios")
+}
+
+model Account {
+  id                 String  @id @default(uuid())
+  userId             String  @map("user_id")
+  type               String
+  provider           String
+  providerAccountId  String  @map("provider_account_id")
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
 }
 
 model MenuItem {

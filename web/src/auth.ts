@@ -2,12 +2,17 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod'; // We need zod for validation, it is usually included or we install it
 import bcrypt from 'bcrypt';
+import Google from 'next-auth/providers/google';
+import { PrismaAdapter } from '@auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import { authConfig } from './auth.config';
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
+    adapter: PrismaAdapter(prisma) as any,
+    session: { strategy: "jwt" },
     providers: [
+        Google,
         Credentials({
             async authorize(credentials) {
                 // 1. Check for Switch Token Login (Bypass Password)

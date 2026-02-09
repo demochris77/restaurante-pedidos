@@ -28,8 +28,8 @@ interface User {
     name?: string | null
     email?: string | null
     role?: string
-    username?: string
-    switchToken?: string
+    username?: string | null
+    switchToken?: string | null
 }
 
 interface NavbarProps {
@@ -50,7 +50,7 @@ export default function Navbar({ user, slug }: NavbarProps) {
         username: string
         role: string
         avatar: string
-        switchToken?: string
+        switchToken?: string | null
     }
     const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([])
 

@@ -11,7 +11,7 @@ declare module "next-auth" {
             /** The user's name. */
             name: string
             /** The user's username. */
-            username: string
+            username?: string | null
             /** The user's switch token. */
             switchToken?: string
             /** The user's organization ID. */
@@ -23,7 +23,7 @@ declare module "next-auth" {
 
     interface User {
         role: string
-        username: string
+        username?: string | null
         switchToken?: string
         organizationId?: string
         organizationSlug?: string
