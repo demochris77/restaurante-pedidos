@@ -9,21 +9,39 @@ export const authConfig = {
             const isLoggedIn = !!auth?.user;
             const hasOrg = !!auth?.user?.organizationId;
             const orgSlug = auth?.user?.organizationSlug;
-
-            const isOnDashboard = nextUrl.pathname.startsWith('/admin') ||
-                nextUrl.pathname.startsWith('/waiter') ||
-                nextUrl.pathname.startsWith('/kitchen');
+            const role = auth?.user?.role;
 
             const isAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname === '/register';
+            const isPublicPage = nextUrl.pathname === '/' ||
+                nextUrl.pathname === '/pricing' ||
+                nextUrl.pathname === '/about' ||
+                nextUrl.pathname === '/contact' ||
+                nextUrl.pathname === '/terms' ||
+                nextUrl.pathname === '/privacy';
 
-            if (isOnDashboard) {
-                if (!isLoggedIn) return false; // Redirect to login
-                if (!hasOrg) return Response.redirect(new URL('/register', nextUrl));
-                return true;
+            // 1. Si no está logueado y trata de entrar a cualquier cosa que no sea pública o auth, al login
+            if (!isLoggedIn && !isPublicPage && !isAuthPage) {
+                return false;
             }
 
-            if (isAuthPage && isLoggedIn && hasOrg && orgSlug) {
-                return Response.redirect(new URL(`/${orgSlug}/admin/dashboard`, nextUrl));
+            // 2. Si está logueado pero NO tiene organización:
+            // Forzar redirección a /register, excepto si ya está en /register o páginas públicas
+            if (isLoggedIn && !hasOrg && nextUrl.pathname !== '/register' && !isPublicPage) {
+                return Response.redirect(new URL('/register', nextUrl));
+            }
+
+            // 3. Redirección inteligente de la ruta base /dashboard o páginas de auth
+            // Si está logueado y tiene organización, enviarlo a su panel según rol
+            if (isLoggedIn && hasOrg && orgSlug) {
+                if (isAuthPage || nextUrl.pathname === '/dashboard') {
+                    let targetPath = `/${orgSlug}/admin/dashboard`; // Default para admin
+
+                    if (role === 'mesero') targetPath = `/${orgSlug}/waiter`;
+                    else if (role === 'cocinero') targetPath = `/${orgSlug}/cook`;
+                    else if (role === 'cajero') targetPath = `/${orgSlug}/cashier`;
+
+                    return Response.redirect(new URL(targetPath, nextUrl));
+                }
             }
 
             return true;
