@@ -278,7 +278,7 @@ export default function RegisterPage() {
                                     </div>
                                     <div className="relative flex justify-center text-xs uppercase">
                                         <span className="bg-white dark:bg-slate-800 px-2 text-slate-500">
-                                            {t('login.orContinueWith')} Email
+                                            {t('login.orContinueWithEmail')}
                                         </span>
                                     </div>
                                 </div>

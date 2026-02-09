@@ -85,6 +85,24 @@ export const en = {
     'pricing.feature.emailSupport': 'Email support',
     'pricing.feature.updates': 'Updates included',
 
+    'pricing.feature.tables20': 'Up to 20 tables',
+    'pricing.feature.users10': '10 system users',
+    'pricing.feature.fullOrders': 'Full order management',
+    'pricing.feature.realtimeReports': 'Real-time reports',
+    'pricing.feature.prioritySupport': 'Priority support',
+    'pricing.feature.kitchenIntegration': 'Kitchen integration',
+    'pricing.feature.inventory': 'Inventory control',
+    'pricing.feature.advancedStats': 'Advanced statistics',
+
+    'pricing.feature.unlimitedTables': 'Unlimited tables',
+    'pricing.feature.unlimitedUsers': 'Unlimited users',
+    'pricing.feature.multiRestaurant': 'Multiple restaurants',
+    'pricing.feature.customReports': 'Custom reports',
+    'pricing.feature.support24': '24/7 support',
+    'pricing.feature.api': 'Integration API',
+    'pricing.feature.accountManager': 'Dedicated account manager',
+    'pricing.feature.customization': 'Advanced customization',
+
     // Footer
     'footer.tagline': 'Modern and easy-to-use restaurant management system.',
     'footer.product': 'Product',
@@ -108,6 +126,8 @@ export const en = {
     'login.submitting': 'Signing in...',
     'login.noAccount': "Don't have an account?",
     'login.registerLink': 'Sign up free',
+    'login.orContinueWith': 'Or continue with',
+    'login.orContinueWithEmail': 'Or continue with email',
 
     'register.title': 'Create your account',
     'register.subtitle': 'Start managing your restaurant in minutes',
@@ -120,6 +140,43 @@ export const en = {
     'register.button.create': 'Create Account',
     'register.hasAccount': 'Already have an account?',
     'register.loginLink': 'Sign in',
+    'register.required': '*',
+
+    'register.step1.title': 'Restaurant Information',
+    'register.step1.name': 'Restaurant Name',
+    'register.step1.namePlaceholder': 'My Restaurant',
+    'register.step1.slug': 'Custom URL (slug)',
+    'register.step1.slugHint': 'Lowercase letters, numbers and hyphens only',
+    'register.step1.slugPlaceholder': 'my-restaurant',
+    'register.step1.email': 'Contact Email',
+    'register.step1.emailPlaceholder': 'contact@myrestaurant.com',
+
+    'register.step2.title': 'Administrator Information',
+    'register.step2.fullName': 'Full Name',
+    'register.step2.fullNamePlaceholder': 'John Doe',
+    'register.step2.username': 'Username',
+    'register.step2.usernamePlaceholder': 'admin',
+    'register.step2.password': 'Password',
+    'register.step2.passwordPlaceholder': '••••••••',
+    'register.step2.confirmPassword': 'Confirm Password',
+
+    'register.step3.title': 'Select Your Plan',
+    'register.step3.perMonth': '/month',
+
+    'register.step4.title': 'Confirm Your Information',
+    'register.step4.restaurantSection': 'Restaurant Details',
+    'register.step4.adminSection': 'Administrator Details',
+    'register.step4.usernameLabel': 'Username:',
+    'register.step4.planSection': 'Selected Plan',
+
+    'register.validation.completeFields': 'Please complete all required fields:',
+    'register.validation.invalidEmail': 'Please enter a valid email address',
+    'register.validation.passwordMismatch': 'Passwords do not match',
+    'register.validation.passwordLength': 'Password must be at least 6 characters long',
+    'register.validation.slugTaken': 'This URL is already taken',
+    'register.validation.usernameTaken': 'This username is already taken',
+    'register.validation.emailTaken': 'This email is already registered',
+    'register.validation.available': 'Available!',
 
     // Common
     'common.loading.status': 'Fetching order status...',

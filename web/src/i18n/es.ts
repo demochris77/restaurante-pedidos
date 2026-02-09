@@ -131,6 +131,8 @@ export const es = {
     'login.submitting': 'Iniciando sesión...',
     'login.noAccount': '¿No tienes una cuenta?',
     'login.registerLink': 'Regístrate gratis',
+    'login.orContinueWith': 'O continuar con',
+    'login.orContinueWithEmail': 'O continuar con email',
 
     'register.title': 'Crea tu cuenta',
     'register.subtitle': 'Comienza a gestionar tu restaurante en minutos',
@@ -162,6 +164,20 @@ export const es = {
     'register.hasAccount': '¿Ya tienes una cuenta?',
     'register.loginLink': 'Inicia sesión',
     'register.required': '*',
+    'register.step3.perMonth': '/mes',
+    'register.step4.restaurantSection': 'Datos del Restaurante',
+    'register.step4.adminSection': 'Datos del Administrador',
+    'register.step4.usernameLabel': 'Usuario:',
+    'register.step4.planSection': 'Plan Seleccionado',
+
+    'register.validation.completeFields': 'Por favor completa todos los campos requeridos:',
+    'register.validation.invalidEmail': 'Ingresa un email válido',
+    'register.validation.passwordMismatch': 'Las contraseñas no coinciden',
+    'register.validation.passwordLength': 'La contraseña debe tener al menos 6 caracteres',
+    'register.validation.slugTaken': 'Esta URL ya está en uso',
+    'register.validation.usernameTaken': 'Este usuario ya está en uso',
+    'register.validation.emailTaken': 'Este email ya está registrado',
+    'register.validation.available': '¡Disponible!',
 
     // Payment Pages
     'payment.success.title': '¡Pago Exitoso!',
