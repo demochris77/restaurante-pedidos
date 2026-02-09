@@ -1,6 +1,6 @@
 'use server'
 
-import { signIn } from '@/auth'
+import { signIn, signOut } from '@/auth'
 import { AuthError } from 'next-auth'
 
 export async function authenticate(
@@ -59,11 +59,13 @@ export async function googleAuthenticate(redirectTo?: string) {
     try {
         await signIn('google', { redirectTo: redirectTo || '/admin/dashboard' })
     } catch (error) {
-        // Signin can fail for all sorts of reasons
-        // But the redirect is thrown as an error, so we need to rethrow it
         if (error instanceof AuthError) {
             return 'Google Sign In failed.'
         }
         throw error
     }
+}
+
+export async function logoutAction(redirectTo?: string) {
+    await signOut({ redirectTo: redirectTo || '/login', redirect: true })
 }

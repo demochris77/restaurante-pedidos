@@ -7,18 +7,25 @@ export const authConfig = {
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
+            const hasOrg = !!auth?.user?.organizationId;
+            const orgSlug = auth?.user?.organizationSlug;
+
             const isOnDashboard = nextUrl.pathname.startsWith('/admin') ||
                 nextUrl.pathname.startsWith('/waiter') ||
                 nextUrl.pathname.startsWith('/kitchen');
 
+            const isAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname === '/register';
+
             if (isOnDashboard) {
-                if (isLoggedIn) return true;
-                return false; // Redirect unauthenticated users to login page
-            } else if (isLoggedIn) {
-                // If logged in and on login page, redirect to dashboard?
-                // Logic can be refined later based on user role
-                // return Response.redirect(new URL('/admin/dashboard', nextUrl));
+                if (!isLoggedIn) return false; // Redirect to login
+                if (!hasOrg) return Response.redirect(new URL('/register', nextUrl));
+                return true;
             }
+
+            if (isAuthPage && isLoggedIn && hasOrg && orgSlug) {
+                return Response.redirect(new URL(`/${orgSlug}/admin/dashboard`, nextUrl));
+            }
+
             return true;
         },
         async jwt({ token, user, trigger, session }) {

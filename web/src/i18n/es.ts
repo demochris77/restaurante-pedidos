@@ -133,6 +133,7 @@ export const es = {
     'login.registerLink': 'Regístrate gratis',
     'login.orContinueWith': 'O continuar con',
     'login.orContinueWithEmail': 'O continuar con email',
+    'login.logout': 'Cerrar Sesión',
 
     'register.title': 'Crea tu cuenta',
     'register.subtitle': 'Comienza a gestionar tu restaurante en minutos',
@@ -156,6 +157,7 @@ export const es = {
     'register.step2.password': 'Contraseña',
     'register.step2.passwordPlaceholder': '••••••••',
     'register.step2.confirmPassword': 'Confirmar Contraseña',
+    'register.step2.confirmPasswordPlaceholder': '••••••••',
     'register.step3.title': 'Selecciona tu Plan',
     'register.step4.title': 'Confirma tu Información',
     'register.button.previous': 'Anterior',

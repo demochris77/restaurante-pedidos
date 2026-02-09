@@ -7,8 +7,8 @@ import { Container } from '@/components/ui/container'
 import { useLanguage } from '@/components/providers/language-provider'
 import { ArrowRight, ArrowLeft, Check, Building2, User, CreditCard, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import Link from 'next/link'
-import { googleAuthenticate } from '@/app/lib/actions'
-import { useSession } from 'next-auth/react'
+import { googleAuthenticate, logoutAction } from '@/app/lib/actions'
+import { useSession, signOut } from 'next-auth/react'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -43,6 +43,28 @@ export default function RegisterPage() {
                 // Use email as username for Google users by default
                 username: session.user.email || prev.username,
             }))
+        }
+    }, [session])
+
+    // Clear form when sign out
+    useEffect(() => {
+        if (!session) {
+            setFormData({
+                restaurantName: '',
+                slug: '',
+                contactEmail: '',
+                adminName: '',
+                username: '',
+                password: '',
+                confirmPassword: '',
+                selectedPlan: 'professional'
+            })
+            setAvailability({
+                slug: { checking: false, available: null },
+                email: { checking: false, available: null },
+                username: { checking: false, available: null }
+            })
+            setErrors([])
         }
     }, [session])
 
@@ -238,6 +260,14 @@ export default function RegisterPage() {
                             <p className="text-slate-600 dark:text-slate-300">
                                 {t('register.subtitle')}
                             </p>
+                            {session?.user && (
+                                <button
+                                    onClick={() => signOut({ callbackUrl: '/register' })}
+                                    className="mt-4 text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-500 underline"
+                                >
+                                    {t('login.logout')} ({session.user.name})
+                                </button>
+                            )}
                         </div>
 
                         {/* Progress Steps */}
@@ -431,6 +461,12 @@ export default function RegisterPage() {
                                                     <p className="text-xs text-orange-700 dark:text-orange-300">
                                                         {session.user.name} ({session.user.email})
                                                     </p>
+                                                    <button
+                                                        onClick={() => signOut({ callbackUrl: '/register' })}
+                                                        className="text-xs font-bold text-orange-600 dark:text-orange-400 hover:underline mt-1"
+                                                    >
+                                                        Cerrar Sesión
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>

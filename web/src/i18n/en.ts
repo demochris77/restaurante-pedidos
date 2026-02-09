@@ -134,6 +134,7 @@ export const en = {
     'login.registerLink': 'Sign up free',
     'login.orContinueWith': 'Or continue with',
     'login.orContinueWithEmail': 'Or continue with email',
+    'login.logout': 'Sign Out',
 
     'register.title': 'Create your account',
     'register.subtitle': 'Start managing your restaurant in minutes',
@@ -165,6 +166,7 @@ export const en = {
     'register.step2.password': 'Password',
     'register.step2.passwordPlaceholder': '••••••••',
     'register.step2.confirmPassword': 'Confirm Password',
+    'register.step2.confirmPasswordPlaceholder': '••••••••',
 
     'register.step3.title': 'Select Your Plan',
     'register.step3.perMonth': '/month',
