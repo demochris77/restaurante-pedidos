@@ -1,446 +1,138 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { mercadopago, MERCADOPAGO_PLANS, PlanType } from '@/lib/mercadopago'
-import { Payment, PreApproval } from 'mercadopago'
+import { Payment } from 'mercadopago'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcrypt'
-import { getPlanLimits, getNextBillingDate, getGracePeriodEnd } from '@/lib/mercadopago-subscriptions'
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
+        console.log('--- WEBHOOK RECEIVED ---')
+        console.log('Body:', JSON.stringify(body, null, 2))
 
-        console.log('Mercado Pago webhook received:', body)
+        // 1. Get Payment ID (handle both notification formats)
+        // Format A: { type: 'payment', data: { id: '...' } }
+        // Format B: { topic: 'payment', id: '...' }
+        let paymentId = body.data?.id || body.id || (body.resource && body.resource.split('/').pop())
 
-        // Mercado Pago sends different types of notifications
-        const { type, data, action } = body
-
-        // Handle preapproval (subscription) events
-        if (type === 'subscription_preapproval' || type === 'preapproval') {
-            return handlePreapprovalEvent(data, action)
-        }
-
-        // Handle payment events (for recurring subscription payments)
-        if (type === 'subscription_authorized_payment') {
-            return handleSubscriptionPayment(data)
-        }
-
-        // Handle one-time payment for new organization creation
-        if (type !== 'payment' && action !== 'payment.created' && action !== 'payment.updated') {
-            console.log('Ignoring notification:', type, action)
+        if (!paymentId || (body.type && body.type !== 'payment' && body.topic !== 'payment')) {
+            console.log('Ignoring non-payment notification:', body.type || body.topic)
             return NextResponse.json({ received: true })
         }
 
-        // Get payment ID from notification
-        const paymentId = data?.id
+        console.log('Processing Payment ID:', paymentId)
 
-        if (!paymentId) {
-            console.error('No payment ID in webhook data')
-            return NextResponse.json({ error: 'No payment ID' }, { status: 400 })
-        }
-
-        // Fetch payment details from Mercado Pago API
+        // 2. Fetch payment details from Mercado Pago
         const paymentClient = new Payment(mercadopago)
         const payment = await paymentClient.get({ id: paymentId })
 
-        console.log('Payment details:', {
-            id: payment.id,
-            status: payment.status,
-            status_detail: payment.status_detail,
-        })
+        console.log('Payment Status:', payment.status)
 
-        // Only process approved payments
         if (payment.status !== 'approved') {
-            console.log('Payment not approved, status:', payment.status)
+            console.log('Payment not approved yet. Status:', payment.status)
             return NextResponse.json({ received: true })
         }
 
-        // Check if this payment was already processed
-        const existingSubscription = await prisma.subscription.findFirst({
-            where: {
-                preapprovalId: payment.id?.toString(),
-            },
-        })
+        // 3. Extract metadata with case-insensitive helper
+        const metadata = payment.metadata || {}
+        console.log('Metadata from MP:', JSON.stringify(metadata, null, 2))
 
-        if (existingSubscription) {
-            console.log('Payment already processed:', payment.id)
-            return NextResponse.json({ received: true, message: 'Already processed' })
-        }
-
-        // Extract metadata from payment
-        const metadata = payment.metadata as any
-
-        console.log('Payment metadata RAW:', JSON.stringify(metadata, null, 2))
-
-        if (!metadata) {
-            console.error('No metadata in payment:', payment.id)
-            return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
-        }
-
-        // Helper to get value regardless of snake_case or camelCase
         const getMeta = (key: string) => {
-            return metadata[key] ||
-                metadata[key.toLowerCase()] ||
-                metadata[key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)] ||
-                metadata[key.replace(/_([a-z])/g, (g) => g[1].toUpperCase())]
+            const keys = Object.keys(metadata)
+            const foundKey = keys.find(k => k.toLowerCase() === key.toLowerCase() || k.toLowerCase() === key.replace(/_/g, '').toLowerCase())
+            return foundKey ? metadata[foundKey] : null
         }
 
         const plan = getMeta('plan')
-        const restaurantName = getMeta('restaurantName') || getMeta('restaurant_name')
+        const restaurantName = getMeta('restaurant_name') || getMeta('restaurantName')
         const slug = getMeta('slug')
-        const contactEmail = getMeta('contactEmail') || getMeta('contact_email')
-        const adminName = getMeta('adminName') || getMeta('admin_name')
+        const contactEmail = getMeta('contact_email') || getMeta('contactEmail')
+        const adminName = getMeta('admin_name') || getMeta('adminName')
         const username = getMeta('username')
         const password = getMeta('password')
 
-        console.log('Extracted metadata:', {
-            plan,
-            restaurantName,
-            slug,
-            contactEmail,
-            adminName,
-            username,
-            hasPassword: !!password
-        })
-
-        if (!plan || !slug || !restaurantName || !username || !password) {
-            console.error('Missing required metadata fields:', {
-                plan: !!plan,
-                slug: !!slug,
-                restaurantName: !!restaurantName,
-                username: !!username,
-                password: !!password
-            })
-            return NextResponse.json({
-                error: 'Missing required metadata fields',
-                details: { plan: !!plan, slug: !!slug, restaurantName: !!restaurantName }
-            }, { status: 400 })
+        if (!plan || !slug || !restaurantName || !username) {
+            console.error('CRITICAL: Missing metadata fields in approved payment!', { plan, slug, restaurantName, username })
+            return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
         }
 
-        const selectedPlan = MERCADOPAGO_PLANS[plan as PlanType]
-
-        if (!selectedPlan) {
-            console.error('Invalid plan in metadata:', plan)
-            return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+        // 4. Check if already processed
+        const existingOrg = await prisma.organization.findUnique({ where: { slug } })
+        if (existingOrg) {
+            console.log('Organization already exists for slug:', slug)
+            return NextResponse.json({ received: true, message: 'Already processed' })
         }
 
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10)
-
-        // Create organization, admin user, and subscription in a transaction
-        console.log('Starting DB transaction for organization creation...')
+        // 5. Database Transaction
+        console.log('Starting transaction for slug:', slug)
         const result = await prisma.$transaction(async (tx: any) => {
-            console.log('Checking for existing user with:', { contactEmail, username })
-            // 1. Create Organization
+            const selectedPlan = MERCADOPAGO_PLANS[plan as PlanType] || MERCADOPAGO_PLANS.professional
+
+            // Create Organization
             const organization = await tx.organization.create({
                 data: {
                     name: restaurantName,
                     slug,
+                    subscriptionPlan: plan,
+                    subscriptionStatus: 'active',
                     maxTables: selectedPlan.maxTables,
                     maxUsers: selectedPlan.maxUsers,
                 },
             })
 
-            // 2. Create or Update Admin User
-            // Check if user already exists (common for Google OAuth users who started registration)
+            // Find or update user
             const existingUser = await tx.user.findFirst({
-                where: {
-                    OR: [
-                        { email: contactEmail },
-                        { username: username }
-                    ]
-                }
+                where: { OR: [{ email: contactEmail }, { username }] }
             })
 
-            let user;
+            let user
             if (existingUser) {
                 user = await tx.user.update({
                     where: { id: existingUser.id },
                     data: {
-                        username: existingUser.username || username,
-                        password: existingUser.password || hashedPassword,
-                        name: existingUser.name || adminName,
                         role: 'admin',
                         organizationId: organization.id,
+                        // Update password if it was a temporary one
+                        ...(password && !existingUser.password ? { password: await bcrypt.hash(password, 10) } : {})
                     }
                 })
             } else {
                 user = await tx.user.create({
                     data: {
                         username,
-                        password: hashedPassword,
+                        email: contactEmail,
                         name: adminName,
                         role: 'admin',
                         organizationId: organization.id,
-                        email: contactEmail
-                    },
+                        password: password ? await bcrypt.hash(password, 10) : undefined
+                    }
                 })
             }
 
-            // 3. Create Subscription
-            const subscription = await tx.subscription.create({
+            // Create Subscription record
+            await tx.subscription.create({
                 data: {
                     organizationId: organization.id,
                     plan,
-                    status: 'active',
-                    paymentProvider: 'mercadopago',
-                    customerId: payment.payer?.id?.toString() || null,
-                    preapprovalId: payment.id?.toString() || null,
+                    status: 'authorized',
+                    preapprovalId: paymentId.toString(),
                     currentPeriodStart: new Date(),
-                    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-                },
+                    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                }
             })
 
-            return { organization, user, subscription }
+            return { organization, user }
         })
 
-        console.log('Successfully created organization:', result.organization.slug)
-        console.log('Admin user created:', result.user.username)
+        console.log('Successfully created Org and Admin!')
+        return NextResponse.json({ received: true, orgId: result.organization.id })
 
-        // Send welcome email
-        try {
-            const plans = [
-                { id: 'starter', name: 'Starter' },
-                { id: 'professional', name: 'Professional' },
-                { id: 'enterprise', name: 'Enterprise' }
-            ]
-            const selectedPlan = plans.find((p: { id: string; name: string }) => p.id === plan)
-            await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/email/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'welcome',
-                    to: contactEmail,
-                    data: {
-                        adminName,
-                        restaurantName,
-                        username,
-                        plan: selectedPlan?.name || plan
-                    }
-                })
-            })
-            console.log('Welcome email sent to:', contactEmail)
-        } catch (emailError) {
-            console.error('Error sending welcome email:', emailError)
-            // Don't fail the webhook if email fails
-        }
-
-        return NextResponse.json({
-            received: true,
-            message: 'Organization created successfully',
-            organizationId: result.organization.id,
-        })
     } catch (error: any) {
-        console.error('Error processing Mercado Pago webhook:', error)
-        return NextResponse.json(
-            { error: 'Webhook processing failed', details: error.message },
-            { status: 500 }
-        )
+        console.error('Webhook Error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
 
-// Handle GET requests (Mercado Pago may send test GET requests)
-export async function GET(request: NextRequest) {
-    return NextResponse.json({ status: 'Webhook endpoint active' })
-}
-
-/**
- * Handle preapproval (subscription) events
- */
-async function handlePreapprovalEvent(data: any, action: string) {
-    try {
-        const preapprovalId = data?.id
-
-        if (!preapprovalId) {
-            console.error('No preapproval ID in webhook data')
-            return NextResponse.json({ error: 'No preapproval ID' }, { status: 400 })
-        }
-
-        // Fetch preapproval details from Mercado Pago
-        const preapprovalClient = new PreApproval(mercadopago)
-        const preapproval = await preapprovalClient.get({ id: preapprovalId })
-
-        console.log('Preapproval event:', {
-            id: preapproval.id,
-            status: preapproval.status,
-            action
-        })
-
-        // Find subscription by preapprovalId
-        const subscription = await prisma.subscription.findUnique({
-            where: { preapprovalId },
-            include: { organization: true }
-        })
-
-        if (!subscription) {
-            console.log('Subscription not found for preapprovalId:', preapprovalId)
-            return NextResponse.json({ received: true })
-        }
-
-        // Update subscription based on status
-        switch (preapproval.status) {
-            case 'authorized':
-                // Subscription activated
-                await prisma.$transaction([
-                    prisma.subscription.update({
-                        where: { id: subscription.id },
-                        data: {
-                            status: 'authorized',
-                            paymentFailures: 0,
-                            gracePeriodUntil: null
-                        }
-                    }),
-                    prisma.organization.update({
-                        where: { id: subscription.organizationId },
-                        data: { subscriptionStatus: 'active' }
-                    })
-                ])
-                console.log('Subscription activated:', subscription.id)
-                break
-
-            case 'paused':
-                await prisma.subscription.update({
-                    where: { id: subscription.id },
-                    data: { status: 'paused' }
-                })
-                break
-
-            case 'cancelled':
-                await prisma.$transaction([
-                    prisma.subscription.update({
-                        where: { id: subscription.id },
-                        data: { status: 'cancelled' }
-                    }),
-                    prisma.organization.update({
-                        where: { id: subscription.organizationId },
-                        data: {
-                            subscriptionStatus: 'cancelled',
-                            subscriptionPlan: 'basic',
-                            maxTables: 5,
-                            maxUsers: 2
-                        }
-                    })
-                ])
-                console.log('Subscription cancelled, downgraded to basic:', subscription.id)
-                break
-        }
-
-        return NextResponse.json({ received: true })
-    } catch (error) {
-        console.error('Error handling preapproval event:', error)
-        return NextResponse.json({ error: 'Failed to process preapproval' }, { status: 500 })
-    }
-}
-
-/**
- * Handle recurring subscription payment events
- */
-async function handleSubscriptionPayment(data: any) {
-    try {
-        const paymentId = data?.id
-
-        if (!paymentId) {
-            console.error('No payment ID in subscription payment webhook')
-            return NextResponse.json({ error: 'No payment ID' }, { status: 400 })
-        }
-
-        // Fetch payment details
-        const paymentClient = new Payment(mercadopago)
-        const payment = await paymentClient.get({ id: paymentId })
-
-        console.log('Subscription payment:', {
-            id: payment.id,
-            status: payment.status,
-            preapproval_id: (payment as any).preapproval_id
-        })
-
-        const preapprovalId = (payment as any).preapproval_id
-
-        if (!preapprovalId) {
-            console.log('No preapproval_id in payment')
-            return NextResponse.json({ received: true })
-        }
-
-        // Find subscription
-        const subscription = await prisma.subscription.findUnique({
-            where: { preapprovalId },
-            include: { organization: true }
-        })
-
-        if (!subscription) {
-            console.log('Subscription not found for preapprovalId:', preapprovalId)
-            return NextResponse.json({ received: true })
-        }
-
-        if (payment.status === 'approved') {
-            // Payment successful
-            const nextBilling = getNextBillingDate()
-
-            // Check if there's a pending plan change
-            const updates: any = {
-                lastPaymentDate: new Date(),
-                nextBillingDate: nextBilling,
-                currentPeriodStart: new Date(),
-                currentPeriodEnd: nextBilling,
-                paymentFailures: 0,
-                gracePeriodUntil: null
-            }
-
-            // Apply pending plan change if exists
-            if (subscription.pendingPlan) {
-                updates.plan = subscription.pendingPlan
-                updates.amount = subscription.pendingPlanAmount
-                updates.pendingPlan = null
-                updates.pendingPlanAmount = null
-
-                const limits = getPlanLimits(subscription.pendingPlan as any)
-
-                // Update organization with new plan
-                await prisma.organization.update({
-                    where: { id: subscription.organizationId },
-                    data: {
-                        subscriptionPlan: subscription.pendingPlan,
-                        maxTables: limits.maxTables,
-                        maxUsers: limits.maxUsers,
-                        subscriptionStatus: 'active'
-                    }
-                })
-
-                console.log('Applied pending plan change:', subscription.pendingPlan)
-            }
-
-            await prisma.subscription.update({
-                where: { id: subscription.id },
-                data: updates
-            })
-
-            console.log('Subscription payment processed successfully')
-        } else if (payment.status === 'rejected') {
-            // Payment failed
-            const failures = subscription.paymentFailures + 1
-            const gracePeriod = getGracePeriodEnd(7)
-
-            await prisma.$transaction([
-                prisma.subscription.update({
-                    where: { id: subscription.id },
-                    data: {
-                        paymentFailures: failures,
-                        gracePeriodUntil: gracePeriod
-                    }
-                }),
-                prisma.organization.update({
-                    where: { id: subscription.organizationId },
-                    data: {
-                        subscriptionStatus: failures >= 3 ? 'blocked' : 'past_due'
-                    }
-                })
-            ])
-
-            console.log(`Payment failed (${failures}/3). Grace period until:`, gracePeriod)
-        }
-
-        return NextResponse.json({ received: true })
-    } catch (error) {
-        console.error('Error handling subscription payment:', error)
-        return NextResponse.json({ error: 'Failed to process payment' }, { status: 500 })
-    }
+export async function GET() {
+    return NextResponse.json({ status: 'active' })
 }
