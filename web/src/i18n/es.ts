@@ -22,6 +22,7 @@ export const es = {
     'nav.remove_account': 'Eliminar cuenta',
     'status.active': 'Activo',
     'nav.logout': 'Cerrar Sesión',
+    'hint.setup': '¡Configura tu restaurante aquí!',
 
     // Landing Page
     'landing.hero.title': 'Gestiona tu Restaurante con',
@@ -68,9 +69,9 @@ export const es = {
 
     'pricing.starter.name': 'Starter',
     'pricing.starter.description': 'Perfecto para restaurantes pequeños',
-    'pricing.professional.name': 'Professional',
+    'pricing.professional.name': 'Profesional',
     'pricing.professional.description': 'Ideal para restaurantes en crecimiento',
-    'pricing.enterprise.name': 'Enterprise',
+    'pricing.enterprise.name': 'Empresarial',
     'pricing.enterprise.description': 'Para cadenas y múltiples locales',
 
     'pricing.faq.title': 'Preguntas Frecuentes',
@@ -112,6 +113,8 @@ export const es = {
     'pricing.starter.desc': 'Perfecto para restaurantes pequeños',
     'pricing.professional.desc': 'Ideal para restaurantes en crecimiento',
     'pricing.enterprise.desc': 'Para cadenas y múltiples locales',
+
+
 
     // Register Cancel
     'payment.cancel.title': 'Pago Cancelado',
@@ -359,6 +362,7 @@ export const es = {
     'admin.payment.amount': 'Monto',
     'admin.payment.transactions': 'transacciones',
     'admin.payment.empty': 'No se encontraron pedidos para este método de pago.',
+    'settings.error.loading': 'No se pudo cargar la información de la organización',
 
     // Role translations
     'role.admin': 'Administrador',
@@ -368,19 +372,111 @@ export const es = {
     'role.mesero': 'Mesero',
     'role.cocinero': 'Cocinero',
     'role.cajero': 'Cajero',
+    'role.facturero': 'Facturero',
 
     // User Settings
-    'settings.users.title': 'Usuarios',
+    'settings.backToDashboard': 'Volver al Panel',
+    'settings.title': 'Configuración',
+    'settings.subtitle': 'Gestiona las preferencias de tu cuenta y organización',
+
+    'settings.subscription.title': 'Suscripción',
+
+    'settings.organization.title': 'Organización',
+    'settings.organization.subtitle': 'Administra los detalles de tu negocio',
+    'settings.organization.nit': 'NIT / ID Fiscal',
+    'settings.organization.nitPlaceholder': 'Ingresa el NIT o ID',
+    'settings.organization.phone': 'Teléfono de Contacto',
+    'settings.organization.phonePlaceholder': '300 123 4567',
+    'settings.organization.email': 'Email de Contacto',
+    'settings.organization.emailPlaceholder': 'contacto@empresa.com',
+    'settings.organization.save': 'Guardar Cambios',
+    'settings.organization.success': 'Información actualizada correctamente',
+    'settings.organization.error': 'Error al actualizar la información',
+
+    'settings.account.title': 'Mi Cuenta',
+    'settings.account.subtitle': 'Gestiona tu perfil y seguridad',
+    'settings.account.profile': 'Perfil de Usuario',
+    'settings.account.name': 'Nombre Completo',
+    'settings.account.username': 'Nombre de Usuario',
+    'settings.account.updateProfile': 'Actualizar Perfil',
+    'settings.account.profileSuccess': 'Perfil actualizado correctamente',
+    'settings.account.profileError': 'Error al actualizar el perfil',
+    'settings.account.changePassword': 'Cambiar Contraseña',
+    'settings.account.currentPassword': 'Contraseña Actual',
+    'settings.account.newPassword': 'Nueva Contraseña',
+    'settings.account.confirmPassword': 'Confirmar Nueva Contraseña',
+    'settings.account.updatePassword': 'Actualizar Contraseña',
+    'settings.account.passwordSuccess': 'Contraseña actualizada correctamente',
+    'settings.account.passwordError': 'Error al actualizar la contraseña',
+    'settings.account.passwordMismatch': 'Las contraseñas no coinciden',
+    'settings.account.passwordWeak': 'La contraseña debe tener al menos 6 caracteres',
+
+    'settings.users.title': 'Gestión de Usuarios',
     'settings.users.subtitle': 'Gestiona tu personal y permisos',
     'settings.users.current': 'Usuarios Actuales',
     'settings.users.add': 'Agregar Usuario',
     'settings.users.empty': 'No se encontraron usuarios.',
+    'settings.users.label': 'Usuarios',
+
+    'settings.org.title': 'Información de la Organización',
+    'settings.org.name': 'Nombre de la Organización',
+    'settings.org.slug': 'Slug / URL',
+    'settings.org.created': 'Fecha de Creación',
+
+    'settings.sub.statusTitle': 'Estado de la Suscripción',
+    'settings.sub.nextBilling': 'Próxima Fecha de Facturación',
+    'settings.sub.pendingChange': 'Cambio Pendiente',
+    'settings.sub.pendingChangeDesc': 'Tu plan cambiará a {plan} en tu próxima fecha de facturación.',
+    'settings.sub.cancelledState': 'Suscripción Cancelada',
+    'settings.sub.cancelledStateDesc': 'Tu suscripción terminará el {date}. Seguirás teniendo acceso hasta esa fecha.',
+    'settings.sub.cancelBtn': 'Cancelar Suscripción',
+    'settings.sub.status.trial': 'Prueba Gratuita',
+    'settings.sub.status.active': 'Activa',
+    'settings.sub.status.past_due': 'Pago Pendiente',
+    'settings.sub.status.blocked': 'Bloqueada',
+    'settings.sub.status.cancelled': 'Cancelada',
+
+    'settings.plan.title': 'Suscripción y Plan',
+    'settings.plan.subtitle': 'Gestiona los límites y el nivel de tu servicio',
+    'settings.plan.changeBtn': 'Cambiar Plan',
+
+    'settings.tables.title': 'Gestión de Mesas',
+    'settings.tables.subtitle': 'Configura y organiza las mesas de tu restaurante',
+    'settings.tables.label': 'Mesas',
+    'settings.tables.current': 'Mesas Actuales',
+    'settings.tables.add': 'Agregar Mesa',
+    'settings.tables.empty': 'No se encontraron mesas configuradas.',
+    'settings.tables.table': 'Mesa',
+    'settings.tables.people': 'personas',
+    'settings.tables.edit': 'Editar Mesa',
+    'settings.tables.delete': 'Eliminar Mesa',
+
+    'upgrade.limit.title': 'Límite de {resource} alcanzado',
+    'upgrade.warning.title': 'Cerca del límite de {resource}',
+    'upgrade.limit.message': 'Has alcanzado el máximo de {resource} permitido en el plan {plan}. Actualiza tu plan para añadir más.',
+    'upgrade.warning.message': 'Has usado casi todos los {resource} disponibles en tu plan {plan}.',
+    'upgrade.button': 'Actualizar Plan',
+
+    'usage.limit_reached': 'Has alcanzado el límite de tu plan',
+    'usage.near_limit': 'Cerca del límite - considera actualizar tu plan',
+    'usage.unlimited': '✓ Ilimitado',
 
     // User Modal
     'usermodal.title': 'Agregar Nuevo Usuario',
     'usermodal.fullname': 'Nombre Completo',
     'usermodal.username': 'Email/Usuario',
     'usermodal.password': 'Contraseña',
+
+    // Table Modal
+    'tablemodal.title': 'Agregar Nueva Mesa',
+    'tablemodal.number': 'Número de Mesa',
+    'tablemodal.capacity': 'Capacidad (Personas)',
+    'tablemodal.is_blockable': 'Meseros pueden bloquear (QR)',
+    'tablemodal.create': 'Crear Mesa',
+
+    'modal.delete.title': 'Eliminar Mesa',
+    'modal.delete.tableText': '¿Estás seguro de que deseas eliminar la',
+    'modal.delete.warning': 'Esta acción no se puede deshacer y liberará el cupo en tu plan.',
     'usermodal.role': 'Rol del Sistema',
     'usermodal.create': 'Crear Usuario',
 

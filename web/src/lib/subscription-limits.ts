@@ -105,12 +105,33 @@ export async function getOrganizationWithUsage(organizationId: string) {
 
     if (!organization) return null
 
+    const limitTables = organization.maxTables ?? 0 // Use 0 or handle null if strictly limited but null means unlimited usually? 
+    // In checkTableLimit, null means unlimited. 
+    const isTablesUnlimited = organization.maxTables === null || organization.maxTables === undefined
+    const tablesCount = organization._count.tables
+
+    const limitUsers = organization.maxUsers ?? 0
+    const isUsersUnlimited = organization.maxUsers === null || organization.maxUsers === undefined
+    const usersCount = organization._count.users
+
     return {
         ...organization,
         usage: {
             menuItems: organization._count.menuItems,
-            tables: organization._count.tables,
-            users: organization._count.users
+            tables: {
+                current: tablesCount,
+                max: organization.maxTables ?? 0,
+                percentage: isTablesUnlimited ? 0 : (tablesCount / (organization.maxTables || 1)) * 100,
+                canAdd: isTablesUnlimited || tablesCount < (organization.maxTables || 0),
+                isUnlimited: isTablesUnlimited
+            },
+            users: {
+                current: usersCount,
+                max: organization.maxUsers ?? 0,
+                percentage: isUsersUnlimited ? 0 : (usersCount / (organization.maxUsers || 1)) * 100,
+                canAdd: isUsersUnlimited || usersCount < (organization.maxUsers || 0),
+                isUnlimited: isUsersUnlimited
+            }
         }
     }
 }

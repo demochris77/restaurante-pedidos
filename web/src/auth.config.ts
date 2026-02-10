@@ -24,13 +24,21 @@ export const authConfig = {
                 return false;
             }
 
-            // 2. Si está logueado pero NO tiene organización:
+            // 2. Superadmin handling (Global Access)
+            if (isLoggedIn && role === 'superadmin') {
+                if (isAuthPage || nextUrl.pathname === '/dashboard' || nextUrl.pathname === '/') {
+                    return Response.redirect(new URL('/superadmin/dashboard', nextUrl));
+                }
+                return true;
+            }
+
+            // 3. Regular users logueados pero NO tienen organización:
             // Forzar redirección a /register, excepto si ya está en una subruta de /register o en páginas públicas
             if (isLoggedIn && !hasOrg && !nextUrl.pathname.startsWith('/register') && !isPublicPage) {
                 return Response.redirect(new URL('/register', nextUrl));
             }
 
-            // 3. Redirección inteligente de la ruta base /dashboard o páginas de auth
+            // 4. Redirección inteligente de la ruta base /dashboard o páginas de auth
             // Si está logueado y tiene organización, enviarlo a su panel según rol
             if (isLoggedIn && hasOrg && orgSlug) {
                 if (isAuthPage || nextUrl.pathname === '/dashboard') {

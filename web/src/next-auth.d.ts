@@ -18,6 +18,8 @@ declare module "next-auth" {
             organizationId?: string
             /** The user's organization slug. */
             organizationSlug?: string
+            /** Whether the user has seen the settings hint. */
+            hasSeenSettingsHint?: boolean
         } & DefaultSession["user"]
     }
 
@@ -27,5 +29,6 @@ declare module "next-auth" {
         switchToken?: string
         organizationId?: string
         organizationSlug?: string
+        hasSeenSettingsHint?: boolean
     }
 }

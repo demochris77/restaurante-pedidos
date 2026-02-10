@@ -69,3 +69,16 @@ export async function googleAuthenticate(redirectTo?: string) {
 export async function logoutAction(redirectTo?: string) {
     await signOut({ redirectTo: redirectTo || '/login', redirect: true })
 }
+export async function markSettingsHintAsSeen(userId: string) {
+    try {
+        const prisma = (await import('@/lib/prisma')).default
+        await (prisma.user as any).update({
+            where: { id: userId },
+            data: { hasSeenSettingsHint: true }
+        })
+        return { success: true }
+    } catch (error) {
+        console.error('Failed to mark hint as seen:', error)
+        return { success: false }
+    }
+}

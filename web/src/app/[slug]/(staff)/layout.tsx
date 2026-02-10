@@ -35,7 +35,14 @@ export default async function StaffLayout({
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-            <Navbar user={session.user} slug={slug} />
+            <Navbar
+                user={{
+                    ...session.user,
+                    id: user.id,
+                    hasSeenSettingsHint: (user as any).hasSeenSettingsHint
+                }}
+                slug={slug}
+            />
             {children}
         </div>
     )

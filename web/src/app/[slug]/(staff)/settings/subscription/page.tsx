@@ -107,16 +107,16 @@ export default function SubscriptionPage() {
         return (
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
                 <p className="text-slate-600 dark:text-slate-400">
-                    No se pudo cargar la información de la organización
+                    {t('settings.error.loading')}
                 </p>
             </div>
         )
     }
 
     const getPlanName = () => {
-        if (organization.maxTables >= 999) return 'Empresarial'
-        if (organization.maxTables >= 15) return 'Profesional'
-        return 'Starter' // Básico renamed to match keys if needed, or kept as is
+        if (organization.maxTables >= 999) return t('pricing.enterprise.name')
+        if (organization.maxTables >= 15) return t('pricing.professional.name')
+        return t('pricing.starter.name')
     }
 
     const getStatusBadge = () => {

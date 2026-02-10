@@ -22,6 +22,7 @@ export const en = {
     'nav.remove_account': 'Remove account',
     'status.active': 'Active',
     'nav.logout': 'Sign Out',
+    'hint.setup': 'Setup your restaurant here!',
 
     // Landing Page
     'landing.hero.title': 'Manage Your Restaurant with',
@@ -112,6 +113,8 @@ export const en = {
     'pricing.starter.desc': 'Perfect for small restaurants',
     'pricing.professional.desc': 'Ideal for growing restaurants',
     'pricing.enterprise.desc': 'For chains and multiple locations',
+
+
 
     // Register Cancel
     'payment.cancel.title': 'Payment Cancelled',
@@ -364,6 +367,7 @@ export const en = {
     'admin.payment.amount': 'Amount',
     'admin.payment.transactions': 'transactions',
     'admin.payment.empty': 'No orders found for this payment method.',
+    'settings.error.loading': 'Could not load organization information',
 
     // Role translations
     'role.admin': 'Administrator',
@@ -373,19 +377,111 @@ export const en = {
     'role.mesero': 'Waiter',
     'role.cocinero': 'Cook',
     'role.cajero': 'Cashier',
+    'role.facturero': 'Invoicer',
 
     // User Settings
-    'settings.users.title': 'Users',
+    'settings.backToDashboard': 'Back to Dashboard',
+    'settings.title': 'Settings',
+    'settings.subtitle': 'Manage your account and organization preferences',
+
+    'settings.subscription.title': 'Subscription',
+
+    'settings.organization.title': 'Organization',
+    'settings.organization.subtitle': 'Manage your business details',
+    'settings.organization.nit': 'Tax ID / NIT',
+    'settings.organization.nitPlaceholder': 'Enter Tax ID',
+    'settings.organization.phone': 'Contact Phone',
+    'settings.organization.phonePlaceholder': '300 123 4567',
+    'settings.organization.email': 'Contact Email',
+    'settings.organization.emailPlaceholder': 'contact@company.com',
+    'settings.organization.save': 'Save Changes',
+    'settings.organization.success': 'Information updated successfully',
+    'settings.organization.error': 'Error updating information',
+
+    'settings.account.title': 'My Account',
+    'settings.account.subtitle': 'Manage your profile and security',
+    'settings.account.profile': 'User Profile',
+    'settings.account.name': 'Full Name',
+    'settings.account.username': 'Username',
+    'settings.account.updateProfile': 'Update Profile',
+    'settings.account.profileSuccess': 'Profile updated successfully',
+    'settings.account.profileError': 'Error updating profile',
+    'settings.account.changePassword': 'Change Password',
+    'settings.account.currentPassword': 'Current Password',
+    'settings.account.newPassword': 'New Password',
+    'settings.account.confirmPassword': 'Confirm New Password',
+    'settings.account.updatePassword': 'Update Password',
+    'settings.account.passwordSuccess': 'Password updated successfully',
+    'settings.account.passwordError': 'Error updating password',
+    'settings.account.passwordMismatch': 'Passwords do not match',
+    'settings.account.passwordWeak': 'Password must be at least 6 characters long',
+
+    'settings.users.title': 'User Management',
     'settings.users.subtitle': 'Manage your staff and permissions',
     'settings.users.current': 'Current Users',
     'settings.users.add': 'Add User',
     'settings.users.empty': 'No users found.',
+    'settings.users.label': 'Users',
+
+    'settings.org.title': 'Organization Information',
+    'settings.org.name': 'Organization Name',
+    'settings.org.slug': 'Slug / URL',
+    'settings.org.created': 'Creation Date',
+
+    'settings.sub.statusTitle': 'Subscription Status',
+    'settings.sub.nextBilling': 'Next Billing Date',
+    'settings.sub.pendingChange': 'Pending Change',
+    'settings.sub.pendingChangeDesc': 'Your plan will change to {plan} on your next billing date.',
+    'settings.sub.cancelledState': 'Subscription Cancelled',
+    'settings.sub.cancelledStateDesc': 'Your subscription will end on {date}. You will continue to have access until then.',
+    'settings.sub.cancelBtn': 'Cancel Subscription',
+    'settings.sub.status.trial': 'Trial',
+    'settings.sub.status.active': 'Active',
+    'settings.sub.status.past_due': 'Past Due',
+    'settings.sub.status.blocked': 'Blocked',
+    'settings.sub.status.cancelled': 'Cancelled',
+
+    'settings.plan.title': 'Subscription & Plan',
+    'settings.plan.subtitle': 'Manage your service level and limits',
+    'settings.plan.changeBtn': 'Change Plan',
+
+    'settings.tables.title': 'Table Management',
+    'settings.tables.subtitle': 'Configure and organize your restaurant tables',
+    'settings.tables.label': 'Tables',
+    'settings.tables.current': 'Current Tables',
+    'settings.tables.add': 'Add Table',
+    'settings.tables.empty': 'No guest tables configured yet.',
+    'settings.tables.table': 'Table',
+    'settings.tables.people': 'people',
+    'settings.tables.edit': 'Edit Table',
+    'settings.tables.delete': 'Delete Table',
+
+    'upgrade.limit.title': '{resource} limit reached',
+    'upgrade.warning.title': 'Near {resource} limit',
+    'upgrade.limit.message': "You've reached the maximum number of {resource} allowed in the {plan} plan. Upgrade your plan to add more.",
+    'upgrade.warning.message': "You've used almost all of the {resource} available in your {plan} plan.",
+    'upgrade.button': 'Upgrade Plan',
+
+    'usage.limit_reached': 'You have reached your plan limit',
+    'usage.near_limit': 'Near limit - consider upgrading your plan',
+    'usage.unlimited': '✓ Unlimited',
 
     // User Modal
     'usermodal.title': 'Add New User',
     'usermodal.fullname': 'Full Name',
     'usermodal.username': 'Email/Username',
     'usermodal.password': 'Password',
+
+    // Table Modal
+    'tablemodal.title': 'Add New Table',
+    'tablemodal.number': 'Table Number',
+    'tablemodal.capacity': 'Capacity (People)',
+    'tablemodal.is_blockable': 'Waiters can block (QR)',
+    'tablemodal.create': 'Create Table',
+
+    'modal.delete.title': 'Delete Table',
+    'modal.delete.tableText': 'Are you sure you want to delete',
+    'modal.delete.warning': 'This action cannot be undone and will free up space in your plan.',
     'usermodal.role': 'System Role',
     'usermodal.create': 'Create User',
 

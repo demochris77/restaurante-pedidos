@@ -61,6 +61,8 @@ model User {
   image          String?
   role           String    @default("user") @map("rol") // admin, mesero, cocinero, cajero
   language       String?   @default("es")
+  isBanned       Boolean   @default(false) @map("is_banned")
+  hasSeenSettingsHint Boolean @default(false) @map("has_seen_settings_hint")
   switchToken    String?   @unique @map("switch_token") // For seamless account switching
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -396,4 +398,22 @@ model Subscription {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+// ==========================================================
+// GLOBAL SETTINGS
+// ==========================================================
+
+model PlanDefinition {
+  id            String   @id @default(uuid())
+  slug          String   @unique // basic, professional, enterprise
+  name          String
+  price         Decimal  @db.Decimal(10, 2)
+  maxTables     Int
+  maxUsers      Int
+  maxMenuItems  Int?
+  features      String[] @default([])
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("plan_definitions")
 }

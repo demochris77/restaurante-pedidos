@@ -23,6 +23,8 @@ import { Button } from '@/components/ui/button' // We might need to create this 
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { useLanguage } from '@/components/providers/language-provider'
+import { markSettingsHintAsSeen } from '@/app/lib/actions'
+import { useRouter } from 'next/navigation'
 
 interface User {
     name?: string | null
@@ -30,6 +32,8 @@ interface User {
     role?: string
     username?: string | null
     switchToken?: string | null
+    hasSeenSettingsHint?: boolean
+    id?: string
 }
 
 interface NavbarProps {
@@ -40,7 +44,9 @@ interface NavbarProps {
 export default function Navbar({ user, slug }: NavbarProps) {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const [menuView, setMenuView] = useState<'main' | 'accounts'>('main')
+    const [showHint, setShowHint] = useState(user.role === 'admin' && !user.hasSeenSettingsHint)
     const { theme, setTheme } = useTheme()
+    const router = useRouter()
     const { language, setLanguage, t } = useLanguage()
     const isConnected = true // Mock for now
 
@@ -139,6 +145,15 @@ export default function Navbar({ user, slug }: NavbarProps) {
         setIsUserMenuOpen(false) // Close menu after selection
     }
 
+    const handleOpenUserMenu = async () => {
+        setIsUserMenuOpen(!isUserMenuOpen)
+        if (showHint && user.id) {
+            setShowHint(false)
+            await markSettingsHintAsSeen(user.id)
+            router.refresh()
+        }
+    }
+
     // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -193,15 +208,29 @@ export default function Navbar({ user, slug }: NavbarProps) {
                     {/* User Menu */}
                     <div className="relative user-menu-container">
                         <button
-                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                            className="flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 p-1.5 rounded-xl transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                            onClick={handleOpenUserMenu}
+                            className="relative flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 p-1.5 rounded-xl transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
                         >
-                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-sm">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-sm relative">
                                 {user.name?.charAt(0).toUpperCase() || 'U'}
+                                {showHint && (
+                                    <>
+                                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                                        </span>
+                                    </>
+                                )}
                             </div>
                             <span className="text-sm font-medium text-slate-700 dark:text-slate-200 hidden sm:block">
                                 {user.name || 'Usuario'}
                             </span>
+                            {showHint && !isUserMenuOpen && (
+                                <div className="absolute top-full right-0 mt-3 whitespace-nowrap bg-orange-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg animate-bounce pointer-events-none z-50">
+                                    {t('hint.setup') || '¡Configura tu restaurante aquí!'}
+                                    <div className="absolute -top-1 right-8 w-2 h-2 bg-orange-600 rotate-45"></div>
+                                </div>
+                            )}
                             <ChevronDown
                                 size={16}
                                 className={`text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}

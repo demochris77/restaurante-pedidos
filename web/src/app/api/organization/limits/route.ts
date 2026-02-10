@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.json({
-            users: calculateLimit(organization.usage.users, organization.maxUsers),
+            users: organization.usage.users,
             menuItems: calculateLimit(organization.usage.menuItems, organization.maxMenuItems),
-            tables: calculateLimit(organization.usage.tables, organization.maxTables)
+            tables: organization.usage.tables
         })
     } catch (error) {
         console.error('Error fetching organization limits:', error)
