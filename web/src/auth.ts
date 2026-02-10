@@ -104,15 +104,26 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 token.id = user.id;
                 token.role = (user as any).role;
                 token.organizationId = (user as any).organizationId;
+                token.organizationSlug = (user as any).organizationSlug;
+            }
 
-                // Si el slug ya viene (desde Credentials.authorize), lo guardamos
-                if ((user as any).organizationSlug) {
-                    token.organizationSlug = (user as any).organizationSlug;
+            // 2. REFRESH: Si el token NO tiene organización, vamos a la DB a ver si ya se le asignó una (vía Webhook)
+            // Esto evita que el usuario se quede atrapado en /register si ya pagó
+            if (!token.organizationId) {
+                const userDb = await prisma.user.findUnique({
+                    where: { id: token.id as string },
+                    select: { organizationId: true, role: true, organization: { select: { slug: true } } }
+                });
+
+                if (userDb?.organizationId) {
+                    token.organizationId = userDb.organizationId;
+                    token.role = userDb.role;
+                    token.organizationSlug = userDb.organization?.slug;
+                    console.log(`Session Refreshed for user ${token.id}: Found Org ${token.organizationSlug}`);
                 }
             }
 
-            // 2. Si tenemos ID de organización pero NO tenemos el slug (común en Google Login)
-            // O si ha habido un cambio reciente (como el registro exitoso)
+            // 3. Si tenemos ID de organización pero NO tenemos el slug (fallback de seguridad)
             if (token.organizationId && !token.organizationSlug) {
                 const org = await prisma.organization.findUnique({
                     where: { id: token.organizationId as string },
