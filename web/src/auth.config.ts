@@ -11,7 +11,7 @@ export const authConfig = {
             const orgSlug = auth?.user?.organizationSlug;
             const role = auth?.user?.role;
 
-            const isAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname === '/register';
+            const isAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname.startsWith('/register');
             const isPublicPage = nextUrl.pathname === '/' ||
                 nextUrl.pathname === '/pricing' ||
                 nextUrl.pathname === '/about' ||
@@ -25,8 +25,8 @@ export const authConfig = {
             }
 
             // 2. Si está logueado pero NO tiene organización:
-            // Forzar redirección a /register, excepto si ya está en /register o páginas públicas
-            if (isLoggedIn && !hasOrg && nextUrl.pathname !== '/register' && !isPublicPage) {
+            // Forzar redirección a /register, excepto si ya está en una subruta de /register o en páginas públicas
+            if (isLoggedIn && !hasOrg && !nextUrl.pathname.startsWith('/register') && !isPublicPage) {
                 return Response.redirect(new URL('/register', nextUrl));
             }
 
