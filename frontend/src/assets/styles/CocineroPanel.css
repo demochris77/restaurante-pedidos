@@ -991,3 +991,163 @@ body .modal-actions-row .btn-primary-action.success:hover {
 .btn-primary-action.large {
     min-width: 100px;
 }
+
+/* Grouping Styles */
+.item-group-wrapper {
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--k-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--k-card-bg);
+}
+
+.item-row.group-header {
+    padding: 0.75rem 1rem;
+    background: var(--k-card-bg);
+    border-bottom: none;
+    transition: background 0.2s;
+}
+
+.item-row.group-header.has-expand {
+    cursor: pointer;
+}
+
+.item-row.group-header.has-expand:hover {
+    background: var(--bg-secondary);
+}
+
+.item-note-preview {
+    font-size: 0.75rem;
+    color: var(--k-primary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-weight: 600;
+}
+
+.expand-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--k-secondary);
+}
+
+.expand-icon.rotated {
+    transform: rotate(180deg);
+}
+
+.sub-items-list {
+    background: var(--bg-secondary);
+    padding: 0.5rem 1rem;
+    border-top: 1px dashed var(--k-border);
+}
+
+.sub-item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--k-border);
+}
+
+.sub-item-row:last-child {
+    border-bottom: none;
+}
+
+.sub-item-bullet {
+    width: 6px;
+    height: 6px;
+    background: var(--k-primary);
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
+.sub-item-content {
+    flex: 1;
+}
+
+.item-note-empty {
+    font-size: 0.8rem;
+    color: var(--k-secondary);
+    font-style: italic;
+}
+
+/* Kitchen Items Table Grouping */
+.kitchen-group-wrapper {
+    margin-bottom: 1rem;
+    border: 1px solid var(--k-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--k-card-bg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.kitchen-item-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--k-card-bg);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.kitchen-item-group-header:hover {
+    background: var(--bg-secondary);
+}
+
+.kitchen-item-group-header.expanded {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--k-border);
+}
+
+.group-main-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.group-main-info .item-qty {
+    font-size: 1.1rem;
+    font-weight: 800;
+    background: var(--bg-secondary);
+    padding: 4px 10px;
+    border-radius: 8px;
+    color: var(--k-primary);
+    min-width: 45px;
+    text-align: center;
+}
+
+.group-main-info .item-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.group-note-indicator {
+    color: var(--k-primary);
+    background: #fff7ed;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+}
+
+.group-actions-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.group-details {
+    background: var(--bg-secondary);
+}
+
+.group-details .kitchen-item {
+    border-left: 4px solid var(--k-primary);
+    margin-left: 0.5rem;
+    background: var(--k-card-bg);
+    border-bottom: 1px solid var(--k-border);
+}
+
+.group-details .kitchen-item:last-child {
+    border-bottom: none;
+}

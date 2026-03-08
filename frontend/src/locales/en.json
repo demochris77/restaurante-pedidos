@@ -492,7 +492,9 @@
         "item_served": "Served",
         "wait_waiter": "Waiting Waiter",
         "confirm_start_all": "Start all {count} pending items for table {table}?",
-        "confirm_complete_all": "Mark as READY all {count} items for table {table}?"
+        "confirm_complete_all": "Mark as READY all {count} items for table {table}?",
+        "has_notes": "Has notes",
+        "no_notes": "No notes"
     },
     "notifications": {
         "new_order": "Table {table}: New order ({count} items)",

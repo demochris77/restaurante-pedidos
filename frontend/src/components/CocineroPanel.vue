@@ -79,12 +79,33 @@
               </div>
               
               <div class="items-list">
-                <div v-for="item in pedido.items" :key="item.id" class="item-row">
-                  <div class="qty-badge">{{ item.cantidad }}x</div>
-                  <div class="item-details">
-                    <span class="item-name">{{ item.nombre }}</span>
-                    <div v-if="item.notas" class="item-note">
-                      <FileText :size="12" /> {{ item.notas }}
+                <div v-for="grupo in agruparItems(pedido.items, 'nuevo-' + pedido.id)" :key="grupo.nombre" class="item-group-wrapper">
+                  <div 
+                    class="item-row group-header" 
+                    :class="{ 'has-expand': grupo.items.length > 1 || grupo.tieneNotas }"
+                    @click="grupo.items.length > 1 || grupo.tieneNotas ? toggleGrupo('nuevo-' + pedido.id, grupo.nombre) : null"
+                  >
+                    <div class="qty-badge">{{ grupo.cantidad }}x</div>
+                    <div class="item-details">
+                      <span class="item-name">{{ grupo.nombre }}</span>
+                      <div v-if="!estaGrupoExpandido('nuevo-' + pedido.id, grupo.nombre) && grupo.tieneNotas" class="item-note-preview">
+                        <FileText :size="12" /> {{ $t('kitchen.has_notes') || 'Ver notas' }}
+                      </div>
+                    </div>
+                    <ChevronDown v-if="grupo.items.length > 1 || grupo.tieneNotas" :size="16" class="expand-icon" :class="{ 'rotated': estaGrupoExpandido('nuevo-' + pedido.id, grupo.nombre) }" />
+                  </div>
+                  
+                  <div v-if="estaGrupoExpandido('nuevo-' + pedido.id, grupo.nombre)" class="sub-items-list">
+                    <div v-for="(subItem, sIdx) in grupo.items" :key="subItem.id || sIdx" class="sub-item-row">
+                      <div class="sub-item-bullet"></div>
+                      <div class="sub-item-content">
+                        <div v-if="subItem.notas" class="item-note">
+                          <FileText :size="12" /> {{ subItem.notas }}
+                        </div>
+                        <div v-else class="item-note-empty">
+                          {{ $t('kitchen.no_notes') || 'Sin notas' }}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -169,60 +190,84 @@
               <!-- Contenido expandido -->
               <div v-if="mesa.expandida" class="mesa-body">
                 <div class="mesa-items-container">
-                  <div 
-                    v-for="item in mesa.items" 
-                    :key="item.id"
-                    :class="['kitchen-item', item.estado || 'pendiente']"
-                  >
-                    <div class="item-content">
-                      <div class="item-header-row">
-                        <span class="item-qty">{{ item.cantidad }}x</span>
-                        <span class="item-title">{{ item.nombre }}</span>
-                        
-                        <div class="item-status-pill" :class="item.estado || 'pendiente'">
-                          <template v-if="!item.estado || item.estado === 'pendiente'">
-                             <CircleDashed :size="12" /> {{ $t('kitchen.item_pending') }}
-                          </template>
-                          <template v-else-if="item.estado === 'en_preparacion'">
-                             <Timer :size="12" /> {{ getTiempoTranscurrido(item.started_at) }}
-                          </template>
-                          <template v-else-if="item.estado === 'listo'">
-                             <CheckCircle2 :size="12" /> {{ $t('kitchen.item_ready') }}
-                          </template>
-                          <template v-else-if="item.estado === 'servido'">
-                             <CheckCheck :size="12" /> {{ $t('kitchen.item_served') }}
-                          </template>
+                  <div v-for="grupo in agruparItems(mesa.items, 'mesa-' + mesa.mesa_numero)" :key="grupo.nombre" class="kitchen-group-wrapper">
+                    <div 
+                      class="kitchen-item-group-header" 
+                      :class="{ 'expanded': estaGrupoExpandido('mesa-' + mesa.mesa_numero, grupo.nombre) }"
+                      @click="toggleGrupo('mesa-' + mesa.mesa_numero, grupo.nombre)"
+                    >
+                      <div class="group-main-info">
+                        <span class="item-qty">{{ grupo.cantidad }}x</span>
+                        <span class="item-title">{{ grupo.nombre }}</span>
+                        <div v-if="!estaGrupoExpandido('mesa-' + mesa.mesa_numero, grupo.nombre) && grupo.tieneNotas" class="group-note-indicator">
+                          <FileText :size="12" />
                         </div>
                       </div>
-                      
-                      <div v-if="item.notas" class="item-note-highlight">
-                        <FileText :size="14" /> {{ item.notas }}
+                      <div class="group-actions-preview">
+                        <div class="group-status-summary">
+                          <!-- Show small status dots or similar? For now just chevron -->
+                        </div>
+                        <ChevronDown :size="18" class="expand-icon" :class="{ 'rotated': estaGrupoExpandido('mesa-' + mesa.mesa_numero, grupo.nombre) }" />
                       </div>
                     </div>
-                    
-                    <div class="item-actions">
-                      <button
-                        v-if="!item.estado || item.estado === 'pendiente'"
-                        @click.stop="iniciarItem(item.id)"
-                        class="btn-action start"
+
+                    <div v-if="estaGrupoExpandido('mesa-' + mesa.mesa_numero, grupo.nombre)" class="group-details">
+                      <div 
+                        v-for="item in grupo.items" 
+                        :key="item.id"
+                        :class="['kitchen-item', item.estado || 'pendiente']"
                       >
-                        {{ $t('kitchen.start') }}
-                      </button>
-                      
-                      <button
-                        v-else-if="item.estado === 'en_preparacion'"
-                        @click.stop="completarItem(item.id)"
-                        class="btn-action complete"
-                      >
-                        {{ $t('kitchen.complete') }}
-                      </button>
-                      
-                      <div v-else-if="item.estado === 'listo'" class="status-text ready">
-                        {{ $t('kitchen.wait_waiter') }}
-                      </div>
-                      
-                      <div v-else-if="item.estado === 'servido'" class="status-text served">
-                        <CheckCheck :size="16" />
+                        <div class="item-content">
+                          <div class="item-header-row">
+                            <span class="item-qty">{{ item.cantidad }}x</span>
+                            <span class="item-title">{{ item.nombre }}</span>
+                            
+                            <div class="item-status-pill" :class="item.estado || 'pendiente'">
+                              <template v-if="!item.estado || item.estado === 'pendiente'">
+                                 <CircleDashed :size="12" /> {{ $t('kitchen.item_pending') }}
+                              </template>
+                              <template v-else-if="item.estado === 'en_preparacion'">
+                                 <Timer :size="12" /> {{ getTiempoTranscurrido(item.started_at) }}
+                              </template>
+                              <template v-else-if="item.estado === 'listo'">
+                                 <CheckCircle2 :size="12" /> {{ $t('kitchen.item_ready') }}
+                              </template>
+                              <template v-else-if="item.estado === 'servido'">
+                                 <CheckCheck :size="12" /> {{ $t('kitchen.item_served') }}
+                              </template>
+                            </div>
+                          </div>
+                          
+                          <div v-if="item.notas" class="item-note-highlight">
+                            <FileText :size="14" /> {{ item.notas }}
+                          </div>
+                        </div>
+                        
+                        <div class="item-actions">
+                          <button
+                            v-if="!item.estado || item.estado === 'pendiente'"
+                            @click.stop="iniciarItem(item.id)"
+                            class="btn-action start"
+                          >
+                            {{ $t('kitchen.start') }}
+                          </button>
+                          
+                          <button
+                            v-else-if="item.estado === 'en_preparacion'"
+                            @click.stop="completarItem(item.id)"
+                            class="btn-action complete"
+                          >
+                            {{ $t('kitchen.complete') }}
+                          </button>
+                          
+                          <div v-else-if="item.estado === 'listo'" class="status-text ready">
+                            {{ $t('kitchen.wait_waiter') }}
+                          </div>
+                          
+                          <div v-else-if="item.estado === 'servido'" class="status-text served">
+                            <CheckCheck :size="16" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -286,6 +331,42 @@ const pedidoStore = usePedidoStore();
 const loading = ref(false);
 const now = ref(Date.now());
 const mesasExpandidas = ref(new Set()); // Track which tables are expanded
+const gruposExpandidos = ref(new Set()); // Track which grouped items are expanded (key: scopeId + '-' + nombre)
+
+const toggleGrupo = (scopeId, itemNombre) => {
+  const key = `${scopeId}-${itemNombre}`;
+  if (gruposExpandidos.value.has(key)) {
+    gruposExpandidos.value.delete(key);
+  } else {
+    gruposExpandidos.value.add(key);
+  }
+  gruposExpandidos.value = new Set(gruposExpandidos.value);
+};
+
+const estaGrupoExpandido = (scopeId, itemNombre) => {
+  return gruposExpandidos.value.has(`${scopeId}-${itemNombre}`);
+};
+
+const agruparItems = (items, scopeId) => {
+  if (!items) return [];
+  const grupos = {};
+  items.forEach(item => {
+    const key = item.nombre;
+    if (!grupos[key]) {
+      grupos[key] = {
+        nombre: item.nombre,
+        cantidad: 0,
+        items: [],
+        tieneNotas: false
+      };
+    }
+    grupos[key].cantidad += item.cantidad || 1;
+    grupos[key].items.push(item);
+    if (item.notas) grupos[key].tieneNotas = true;
+  });
+  
+  return Object.values(grupos);
+};
 
 // Batch confirmation modal
 const mostrarConfirmacionBatch = ref(false);

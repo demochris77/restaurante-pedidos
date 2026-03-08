@@ -383,41 +383,58 @@
              <h4>{{ $t('waiter.order_items') }}</h4>
              <div v-if="!pedidoEditando?.items?.length" class="empty-state-mini">{{ $t('waiter.no_active_orders') }}</div>
              <div v-else class="editor-items-list">
-               <div v-for="item in pedidoEditando.items" :key="item.id" class="editor-item-row">
-                  <div class="editor-item-header">
-                      <span class="item-name">{{ item.nombre }}</span>
-                      <span class="item-price">${{ item.precio_unitario }}</span>
-                  </div>
-                  <div class="editor-item-meta">
-                     <span :class="['status-pill-mini', `status-${item.estado}`]">{{ $t('status.' + item.estado) }}</span>
-                     <div class="editor-item-actions">
-                        <button 
-                            v-if="['pendiente','en_preparacion'].includes(item.estado) && item.cantidad > 1"
-                            @click="dividirItemEnEdicion(item)" 
-                            class="btn-icon-mini"
-                            title="Dividir"
-                        >
-                            <Scissors :size="12" />
-                        </button>
-                        <button 
-                            v-if="['pendiente','en_preparacion','listo','servido'].includes(item.estado)"
-                            @click="eliminarItemDelPedido(item)" 
-                            class="btn-icon-mini danger"
-                        >
-                            <Trash2 :size="12" />
-                        </button>
-                     </div>
-                  </div>
-                  <div class="editor-item-notes">
-                     <textarea
-                        v-model="item.notas"
-                        @change="guardarNotasItem(item)"
-                        placeholder="Notas..."
-                        class="input-notes mini"
-                        rows="1"
-                        :disabled="!['pendiente','en_preparacion'].includes(item.estado)"
-                     ></textarea>
-                  </div>
+               <div v-for="grupo in agruparItemsEditor(pedidoEditando.items)" :key="grupo.nombre" class="editor-group-wrapper">
+                 <div class="editor-group-header" @click="toggleGrupoEditor(grupo.nombre)">
+                   <div class="group-info">
+                     <span class="qty-badge-mini">{{ grupo.cantidad }}x</span>
+                     <span class="item-name">{{ grupo.nombre }}</span>
+                   </div>
+                   <div class="group-meta">
+                     <span v-if="!gruposExpandidosEditor.has(grupo.nombre) && grupo.tieneNotas" class="note-indicator">
+                        <FileText :size="12" />
+                     </span>
+                     <ChevronDown :size="16" class="expand-icon" :class="{ 'rotated': gruposExpandidosEditor.has(grupo.nombre) }" />
+                   </div>
+                 </div>
+
+                 <div v-if="gruposExpandidosEditor.has(grupo.nombre)" class="editor-group-content">
+                   <div v-for="item in grupo.items" :key="item.id" class="editor-item-row">
+                      <div class="editor-item-header">
+                          <span class="item-name">{{ item.nombre }}</span>
+                          <span class="item-price">${{ item.precio_unitario }}</span>
+                      </div>
+                      <div class="editor-item-meta">
+                         <span :class="['status-pill-mini', `status-${item.estado}`]">{{ $t('status.' + item.estado) }}</span>
+                         <div class="editor-item-actions">
+                            <button 
+                                v-if="['pendiente','en_preparacion'].includes(item.estado) && item.cantidad > 1"
+                                @click="dividirItemEnEdicion(item)" 
+                                class="btn-icon-mini"
+                                title="Dividir"
+                            >
+                                <Scissors :size="12" />
+                            </button>
+                            <button 
+                                v-if="['pendiente','en_preparacion','listo','servido'].includes(item.estado)"
+                                @click="eliminarItemDelPedido(item)" 
+                                class="btn-icon-mini danger"
+                            >
+                                <Trash2 :size="12" />
+                            </button>
+                         </div>
+                      </div>
+                      <div class="editor-item-notes">
+                         <textarea
+                            v-model="item.notas"
+                            @change="guardarNotasItem(item)"
+                            placeholder="Notas..."
+                            class="input-notes mini"
+                            rows="1"
+                            :disabled="!['pendiente','en_preparacion'].includes(item.estado)"
+                         ></textarea>
+                      </div>
+                   </div>
+                 </div>
                </div>
              </div>
              
@@ -480,21 +497,33 @@
             <div v-if="itemsParaAgregar.length > 0" class="pending-section">
                <h5>{{ $t('waiter.items_to_add') }}</h5>
                <div class="pending-list">
-                  <div v-for="(item, idx) in itemsParaAgregar" :key="idx" class="pending-item">
-                     <div class="pending-header">
-                        <span>{{ item.cantidad }}x {{ item.nombre }}</span>
-                        <div class="pending-actions">
-                            <button v-if="item.cantidad > 1" @click="desagruparItemAgregado(idx)" class="btn-icon-mini"><Scissors :size="12" /></button>
-                            <button @click="quitarItemPendiente(idx)" class="btn-icon-mini"><X :size="12" /></button>
-                        </div>
-                     </div>
-                     <textarea
-                        v-model="item.notas"
-                        placeholder="Notas..."
-                        class="input-notes mini"
-                        rows="1"
-                    ></textarea>
-                  </div>
+                 <div v-for="grupo in agruparItemsEditor(itemsParaAgregar)" :key="grupo.nombre" class="editor-group-wrapper">
+                    <div class="editor-group-header" @click="toggleGrupoEditor('pending-' + grupo.nombre)">
+                      <div class="group-info">
+                        <span class="qty-badge-mini">{{ grupo.cantidad }}x</span>
+                        <span class="item-name">{{ grupo.nombre }}</span>
+                      </div>
+                      <ChevronDown :size="16" class="expand-icon" :class="{ 'rotated': gruposExpandidosEditor.has('pending-' + grupo.nombre) }" />
+                    </div>
+
+                    <div v-if="gruposExpandidosEditor.has('pending-' + grupo.nombre)" class="editor-group-content">
+                      <div v-for="(item, idx) in grupo.items" :key="idx" class="pending-item">
+                         <div class="pending-header">
+                            <span>1x {{ item.nombre }}</span>
+                            <div class="pending-actions">
+                                <!-- Find real index in itemsParaAgregar for deletion -->
+                                <button @click="quitarItemPendientePorReferencia(item)" class="btn-icon-mini"><X :size="12" /></button>
+                            </div>
+                         </div>
+                         <textarea
+                            v-model="item.notas"
+                            placeholder="Notas..."
+                            class="input-notes mini"
+                            rows="1"
+                        ></textarea>
+                      </div>
+                    </div>
+                 </div>
                </div>
                <button 
                 @click="confirmarAgregarItems" 
@@ -722,6 +751,42 @@ const itemsParaAgregar = ref([]);
 const categoriaEdicion = ref('');
 const busquedaEdicion = ref(''); 
 const showScrollUpButton = ref(true);
+const gruposExpandidosEditor = ref(new Set());
+
+const toggleGrupoEditor = (nombre) => {
+  if (gruposExpandidosEditor.value.has(nombre)) {
+    gruposExpandidosEditor.value.delete(nombre);
+  } else {
+    gruposExpandidosEditor.value.add(nombre);
+  }
+  gruposExpandidosEditor.value = new Set(gruposExpandidosEditor.value);
+};
+
+const agruparItemsEditor = (items) => {
+  if (!items) return [];
+  const grupos = {};
+  items.forEach(item => {
+    if (!grupos[item.nombre]) {
+      grupos[item.nombre] = {
+        nombre: item.nombre,
+        items: [],
+        cantidad: 0,
+        tieneNotas: false
+      };
+    }
+    grupos[item.nombre].items.push(item);
+    grupos[item.nombre].cantidad += item.cantidad || 1;
+    if (item.notas) grupos[item.nombre].tieneNotas = true;
+  });
+  return Object.values(grupos);
+};
+
+const quitarItemPendientePorReferencia = (item) => {
+  const idx = itemsParaAgregar.value.indexOf(item);
+  if (idx !== -1) {
+    quitarItemPendiente(idx);
+  }
+};
 
 // Table Change State
 const mostrarCambioMesa = ref(false);

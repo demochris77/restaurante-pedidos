@@ -497,7 +497,9 @@
         "item_served": "Servido",
         "wait_waiter": "Esperando Mesero",
         "confirm_start_all": "¿Iniciar los {count} items pendientes de la mesa {table}?",
-        "confirm_complete_all": "¿Marcar como LISTOS los {count} items de la mesa {table}?"
+        "confirm_complete_all": "¿Marcar como LISTOS los {count} items de la mesa {table}?",
+        "has_notes": "Tiene notas",
+        "no_notes": "Sin notas"
     },
     "notifications": {
         "new_order": "Mesa {table}: Nuevo pedido ({count} items)",
