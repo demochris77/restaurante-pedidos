@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
         })
 
         // Broadcast update via Ably
-        await publishOrderUpdate(organization.id, 'order-created', order)
+        await publishOrderUpdate(organization.id!, 'order-created', order)
 
         return NextResponse.json(order)
     } catch (error) {

@@ -23,10 +23,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const [language, setLanguage] = useState<Language>('es')
 
     const t = (key: string, params?: Record<string, string | number>): string => {
-        const esTranslations = translations['es'] as Record<string, string>
-        const enTranslations = translations['en'] as Record<string, string>
+        const esTranslations = translations['es'] as Record<string, any>
+        const enTranslations = translations['en'] as Record<string, any>
         const currentTranslations = language === 'es' ? esTranslations : enTranslations
-        let text = currentTranslations[key] || key
+        const translationValue = currentTranslations[key]
+        let text = typeof translationValue === 'string' ? translationValue : key
 
         if (params) {
             Object.entries(params).forEach(([paramKey, paramValue]) => {

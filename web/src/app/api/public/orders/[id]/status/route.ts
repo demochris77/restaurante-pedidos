@@ -32,7 +32,7 @@ export async function PUT(
 
         // Broadcast update via Ably
         if (order.organizationId) {
-            await publishOrderUpdate(order.organizationId, 'order-update', {
+            await publishOrderUpdate(order.organizationId!, 'order-update', {
                 type: 'status-update',
                 orderId: id,
                 status

@@ -83,7 +83,7 @@ export async function DELETE(
         })
 
         // Broadcast update
-        await publishOrderUpdate(organization.id, 'order-update', {
+        await publishOrderUpdate(organization.id!, 'order-update', {
             type: 'item-deleted',
             itemId: id,
             orderId: item.orderId

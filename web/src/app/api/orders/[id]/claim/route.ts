@@ -43,7 +43,7 @@ export async function PATCH(
 
         // Notify others (especially cooks) that the order now has a waiter
         if (user.organizationId) {
-            await publishOrderUpdate(user.organizationId, 'order-update', {
+            await publishOrderUpdate(user.organizationId!, 'order-update', {
                 type: 'order-claimed',
                 orderId: orderId,
                 waiterName: user.name

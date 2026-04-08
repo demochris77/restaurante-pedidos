@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
                 data: updateData
             })
 
-            return { tableNumbers }
+            return { tableNumbers, count: itemIds.length }
         })
 
         // Broadcast update via Ably

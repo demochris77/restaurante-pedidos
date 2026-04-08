@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
                 const table = await tx.table.findFirst({
                     where: {
                         number: parseInt(tableNumber),
-                        organizationId: user.organizationId
+                        organizationId: user.organizationId!
                     }
                 })
 
