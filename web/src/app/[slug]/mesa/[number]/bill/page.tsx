@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
@@ -14,11 +14,13 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '@/components/providers/language-provider'
 import { FloatingToggles } from '@/components/common/FloatingToggles'
+import Ably from 'ably'
 
 interface OrderItem {
     id: string
     quantity: number
     unitPrice: number
+    status: string
     menuItem: {
         name: string
     }
@@ -53,27 +55,68 @@ export default function BillPage() {
 
     const isStaff = !!session?.user
 
+    const fetchOrder = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/public/orders/active?slug=${slug}&table=${tableNumber}`)
+            if (res.ok) {
+                const data = await res.json()
+                if (data.active) {
+                    setOrder(data.order)
+                    if (data.tipPercentage !== undefined) {
+                        setTipPercentage(data.tipPercentage)
+                    }
+                    return data.organizationId
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching order for bill:', error)
+        } finally {
+            setLoading(false)
+        }
+        return null
+    }, [slug, tableNumber])
+
     useEffect(() => {
-        const fetchOrder = async () => {
+        fetchOrder()
+
+        let ably: Ably.Realtime | null = null
+        let channel: any | null = null
+
+        const setupAbly = async () => {
+            const orgId = await fetchOrder()
+            if (!orgId) return
+
             try {
-                const res = await fetch(`/api/public/orders/active?slug=${slug}&table=${tableNumber}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    if (data.active) {
-                        setOrder(data.order)
-                        if (data.tipPercentage !== undefined) {
-                            setTipPercentage(data.tipPercentage)
+                ably = new Ably.Realtime({ authUrl: '/api/ably/auth' })
+                channel = ably.channels.get(`orders:${orgId}`)
+                
+                channel.subscribe('order-update', (message: any) => {
+                    const data = message.data
+                    const currentTable = parseInt(tableNumber)
+                    const matchesTable = data.tableNumber === currentTable || 
+                                       (Array.isArray(data.tableNumbers) && data.tableNumbers.includes(currentTable))
+
+                    if (matchesTable) {
+                        if (data.type === 'status-update' && data.status === 'pagado') {
+                            if (!isStaff) {
+                                router.push(`/${slug}/mesa/${tableNumber}/success?orderId=${data.orderId}`)
+                            }
+                        } else {
+                            fetchOrder()
                         }
                     }
-                }
-            } catch (error) {
-                console.error('Error fetching order for bill:', error)
-            } finally {
-                setLoading(false)
+                })
+            } catch (e) {
+                console.error('Ably setup failed in bill:', e)
             }
         }
-        fetchOrder()
-    }, [slug, tableNumber])
+        setupAbly()
+
+        return () => {
+            if (channel) channel.unsubscribe()
+            if (ably) ably.close()
+        }
+    }, [fetchOrder, tableNumber, router, isStaff, slug])
 
     const handleRequestBill = async () => {
         if (!order) return
@@ -143,6 +186,8 @@ export default function BillPage() {
     const tip = subtotal * (tipPercentage / 100)
     const total = subtotal + tip
 
+    const allServed = order.items.every(item => item.status === 'servido')
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
             <header className="p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 flex items-center justify-between skiptranslate">
@@ -183,7 +228,15 @@ export default function BillPage() {
                         </div>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {order.items.map((item) => (
+                        {order.items.reduce((acc: any[], item) => {
+                            const existing = acc.find(i => i.menuItem.name === item.menuItem.name)
+                            if (existing) {
+                                existing.quantity += item.quantity
+                            } else {
+                                acc.push({ ...item })
+                            }
+                            return acc
+                        }, []).map((item) => (
                             <div key={item.id} className="px-6 py-4 grid grid-cols-4 items-center">
                                 <span className="col-span-2 text-sm font-bold text-slate-700 dark:text-slate-200">
                                     {item.menuItem.name}
@@ -228,14 +281,30 @@ export default function BillPage() {
                             </div>
                         </div>
                     ) : (
-                        <button
-                            onClick={handleRequestBill}
-                            disabled={submitting}
-                            className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-orange-600/30 hover:bg-orange-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                        >
-                            {submitting ? <Loader2 className="animate-spin" /> : <CreditCard size={24} />}
-                            {isStaff ? t('bill.send_to_cashier') : t('bill.request_bill')}
-                        </button>
+                        <div className="space-y-4">
+                            {!allServed && (
+                                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="p-2 bg-orange-100 dark:bg-orange-800/50 text-orange-600 rounded-full shrink-0">
+                                        <Loader2 className="animate-spin" size={18} />
+                                    </div>
+                                    <p className="text-sm font-bold text-orange-800 dark:text-orange-300">
+                                        {t('bill.items_pending') || 'Aún hay platos en cocina o por servir'}
+                                    </p>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleRequestBill}
+                                disabled={submitting || !allServed}
+                                className={`w-full py-5 rounded-[2rem] font-black text-xl shadow-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 ${
+                                    !allServed 
+                                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none' 
+                                        : 'bg-orange-600 text-white shadow-orange-600/30 hover:bg-orange-700'
+                                }`}
+                            >
+                                {submitting ? <Loader2 className="animate-spin" /> : <CreditCard size={24} />}
+                                {isStaff ? t('bill.send_to_cashier') : t('bill.request_bill')}
+                            </button>
+                        </div>
                     )}
                 </div>
             </main>

@@ -81,17 +81,19 @@ export async function PATCH(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { name } = body
-
-        // Update organization
-        const updatedOrg = await prisma.organization.update({
-            where: { id: user.organizationId },
-            data: {
-                name: name || undefined,
-                tipPercentage: body.tipPercentage !== undefined ? parseInt(body.tipPercentage) : undefined
-
-            }
-        })
+        const { name, tipPercentage, securityCode, securityEnabled, securityMode } = body
+ 
+         // Update organization
+         const updatedOrg = await prisma.organization.update({
+             where: { id: user.organizationId },
+             data: {
+                 name: name || undefined,
+                 tipPercentage: tipPercentage !== undefined ? parseInt(tipPercentage.toString()) : undefined,
+                 securityCode: securityCode !== undefined ? securityCode : undefined,
+                 securityEnabled: securityEnabled !== undefined ? !!securityEnabled : undefined,
+                 securityMode: securityMode !== undefined ? securityMode : undefined
+             }
+         })
 
         return NextResponse.json(updatedOrg)
     } catch (error) {

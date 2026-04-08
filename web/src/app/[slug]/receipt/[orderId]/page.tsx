@@ -68,30 +68,13 @@ export default function ReceiptPage() {
                 // if I modify it to return full details, OR check if it already does.
 
                 // Let's check `api/public/orders/[id]/status/route.ts`.
-                const res = await fetch(`/api/cashier/orders`)
+                const res = await fetch(`/api/public/orders/${orderId}`)
                 if (res.ok) {
                     const data = await res.json()
+                    setOrder(data)
                     if (data.organization) {
                         setOrganization(data.organization)
                     }
-                    const found = data.orders?.find((o: any) => o.id === orderId)
-                    if (found) {
-                        setOrder(found)
-                        // In the updated cashier API, data might contain organization info or we can infer it
-                        // Since we just modified the API to return organization info inside the response 
-                        // but actually the API returns `orders`, `tipPercentage`, `paymentMethods`.
-                        // Wait, I should have returned organization too if I wanted NIT here easily.
-
-                        // Let's assume the first order found belongs to the org, 
-                        // and we can find org info in the response if we adjust it.
-                        // Or just fetch a specific org endpoint.
-
-                        // Actually, let's just use the current order's org if we had it.
-                        // I'll re-check the api/cashier/orders/route.ts response structure.
-                    }
-
-                    // Let's assume the API now returns organization details in the root or we fetch them.
-                    // For now, I'll fetch organization separately to be sure.
                 }
             } catch (error) {
                 console.error('Error fetching receipt:', error)
@@ -118,7 +101,7 @@ export default function ReceiptPage() {
         return <div className="p-8 text-center font-bold">Orden no encontrada o no tienes permisos.</div>
     }
 
-    const tipAmount = tipFromQuery ? Number(tipFromQuery) : (order.tipAmount || 0)
+    const tipAmount = tipFromQuery ? Number(tipFromQuery) : Number(order.tipAmount || 0)
     const subtotal = Number(order.total)
     const total = subtotal + tipAmount
 
@@ -172,13 +155,32 @@ export default function ReceiptPage() {
                     <span className="w-20 text-right">Total</span>
                 </div>
                 <div className="space-y-2">
-                    {order.items.map((item: any) => (
-                        <div key={item.id} className="flex justify-between items-start leading-tight">
-                            <span className="w-8 text-center">{item.quantity}</span>
-                            <span className="flex-1 px-2 text-left">{item.menuItem.name}</span>
-                            <span className="w-20 text-right">${(Number(item.unitPrice) * item.quantity).toLocaleString()}</span>
-                        </div>
-                    ))}
+                    {(() => {
+                        const stackedItems = Object.values(
+                            order.items.reduce((acc: Record<string, any>, item: any) => {
+                                const key = item.menuItem.id || item.menuItem.name
+                                if (!acc[key]) {
+                                    acc[key] = {
+                                        name: item.menuItem.name,
+                                        quantity: 0,
+                                        totalPrice: 0,
+                                        unitPrice: Number(item.unitPrice)
+                                    }
+                                }
+                                acc[key].quantity += item.quantity
+                                acc[key].totalPrice += Number(item.unitPrice) * item.quantity
+                                return acc
+                            }, {})
+                        )
+
+                        return stackedItems.map((item: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-start leading-tight">
+                                <span className="w-8 text-center">{item.quantity}</span>
+                                <span className="flex-1 px-2 text-left">{item.name}</span>
+                                <span className="w-20 text-right">${item.totalPrice.toLocaleString()}</span>
+                            </div>
+                        ))
+                    })()}
                 </div>
             </div>
 

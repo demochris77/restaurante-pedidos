@@ -22,7 +22,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 price: data.price,
                 maxTables: data.maxTables,
                 maxUsers: data.maxUsers,
-                features: data.features
+                maxMenuItems: data.maxMenuItems,
+                features: data.features,
+                isRecommended: data.isRecommended,
+                hasTrial: data.hasTrial,
+                trialDays: data.trialDays
             }
         })
 

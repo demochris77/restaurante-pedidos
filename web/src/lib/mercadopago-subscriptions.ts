@@ -90,6 +90,34 @@ export async function cancelMPSubscription(preapprovalId: string) {
 }
 
 /**
+ * Update Mercado Pago subscription amount for next billing cycle
+ */
+export async function updateMPSubscriptionAmount(preapprovalId: string, newAmount: number) {
+    try {
+        const response = await preapproval.update({
+            id: preapprovalId,
+            body: {
+                auto_recurring: {
+                    transaction_amount: newAmount,
+                    currency_id: 'COP'
+                }
+            }
+        })
+
+        return {
+            success: true,
+            data: response
+        }
+    } catch (error) {
+        console.error('Error updating MP subscription amount:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+/**
  * Get subscription status from Mercado Pago
  */
 export async function getMPSubscriptionStatus(preapprovalId: string) {

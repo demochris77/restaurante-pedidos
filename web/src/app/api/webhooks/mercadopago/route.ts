@@ -1,130 +1,127 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { mercadopago, MERCADOPAGO_PLANS, PlanType } from '@/lib/mercadopago'
-import { Payment } from 'mercadopago'
+import { Payment, PreApproval } from 'mercadopago'
 import prisma from '@/lib/prisma'
-import bcrypt from 'bcrypt'
+
+function getPlanLimits(plan: PlanType) {
+    return MERCADOPAGO_PLANS[plan] || MERCADOPAGO_PLANS.professional
+}
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        console.log('--- WEBHOOK RECEIVED ---')
-        console.log('Body:', JSON.stringify(body, null, 2))
-
-        // 1. Get Payment ID and validate type
         const type = body.type || body.topic
-        const paymentId = body.data?.id || body.id || (body.resource && body.resource.split('/').pop())
+        const id = body.data?.id || body.id || (body.resource && body.resource.split('/').pop())
 
-        if (!paymentId || type !== 'payment') {
-            console.log(`Ignoring notification: type=${type}, id=${paymentId}`)
-            return NextResponse.json({ received: true })
-        }
+        console.log(`--- WEBHOOK RECEIVED: ${type} [${id}] ---`)
 
-        console.log('Processing Payment ID:', paymentId)
+        if (!id) return NextResponse.json({ received: true })
 
-        // 2. Fetch payment details from Mercado Pago
-        const paymentClient = new Payment(mercadopago)
-        const payment = await paymentClient.get({ id: paymentId })
-
-        console.log('Payment Status:', payment.status)
-
-        if (payment.status !== 'approved') {
-            console.log('Payment not approved yet. Status:', payment.status)
-            return NextResponse.json({ received: true })
-        }
-
-        // 3. Extract metadata with case-insensitive helper
-        const metadata = payment.metadata || {}
-        console.log('Metadata from MP:', JSON.stringify(metadata, null, 2))
-
-        const getMeta = (key: string) => {
-            const keys = Object.keys(metadata)
-            const foundKey = keys.find(k => k.toLowerCase() === key.toLowerCase() || k.toLowerCase() === key.replace(/_/g, '').toLowerCase())
-            return foundKey ? metadata[foundKey] : null
-        }
-
-        const plan = getMeta('plan')
-        const restaurantName = getMeta('restaurant_name') || getMeta('restaurantName')
-        const slug = getMeta('slug')
-        const contactEmail = getMeta('contact_email') || getMeta('contactEmail')
-        const adminName = getMeta('admin_name') || getMeta('adminName')
-        const username = getMeta('username')
-        const password = getMeta('password')
-
-        if (!plan || !slug || !restaurantName || !username) {
-            console.error('CRITICAL: Missing metadata fields in approved payment!', { plan, slug, restaurantName, username })
-            return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
-        }
-
-        // 4. Check if already processed
-        const existingOrg = await prisma.organization.findUnique({ where: { slug } })
-        if (existingOrg) {
-            console.log('Organization already exists for slug:', slug)
-            return NextResponse.json({ received: true, message: 'Already processed' })
-        }
-
-        // 5. Database Transaction
-        console.log('Starting transaction for slug:', slug)
-        const result = await prisma.$transaction(async (tx: any) => {
-            const selectedPlan = MERCADOPAGO_PLANS[plan as PlanType] || MERCADOPAGO_PLANS.professional
-
-            // Create Organization
-            const organization = await tx.organization.create({
-                data: {
-                    name: restaurantName,
-                    slug,
-                    subscriptionPlan: plan,
-                    subscriptionStatus: 'active',
-                    maxTables: selectedPlan.maxTables,
-                    maxUsers: selectedPlan.maxUsers,
-                },
-            })
-
-            // Find or update user
-            const existingUser = await tx.user.findFirst({
-                where: { OR: [{ email: contactEmail }, { username }] }
-            })
-
-            let user
-            if (existingUser) {
-                user = await tx.user.update({
-                    where: { id: existingUser.id },
-                    data: {
-                        role: 'admin',
-                        organizationId: organization.id,
-                        // Update password if it was a temporary one
-                        ...(password && !existingUser.password ? { password: await bcrypt.hash(password, 10) } : {})
-                    }
-                })
-            } else {
-                user = await tx.user.create({
-                    data: {
-                        username,
-                        email: contactEmail,
-                        name: adminName,
-                        role: 'admin',
-                        organizationId: organization.id,
-                        password: password ? await bcrypt.hash(password, 10) : undefined
+        // 1. Handle Subscription Status Changes (Preapproval)
+        if (type === 'subscription_preapproval' || type === 'preapproval') {
+            const preapprovalClient = new PreApproval(mercadopago)
+            const sub = await preapprovalClient.get({ id })
+            
+            if (sub && sub.external_reference) {
+                console.log(`Updating subscription status for Org: ${sub.external_reference} to ${sub.status}`)
+                await prisma.subscription.update({
+                    where: { organizationId: sub.external_reference },
+                    data: { 
+                        status: sub.status || 'unknown',
+                        updatedAt: new Date()
                     }
                 })
             }
+            return NextResponse.json({ received: true })
+        }
 
-            // Create Subscription record
-            await tx.subscription.create({
-                data: {
-                    organizationId: organization.id,
-                    plan,
-                    status: 'authorized',
-                    preapprovalId: paymentId.toString(),
-                    currentPeriodStart: new Date(),
-                    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        // 2. Handle Payments
+        if (type === 'payment') {
+            const paymentClient = new Payment(mercadopago)
+            const payment = await paymentClient.get({ id })
+            const orgId = payment.external_reference
+
+            console.log(`Payment status: ${payment.status} for OrgID: ${orgId}`)
+
+            if (!orgId) {
+                console.log('Payment without external_reference. Ignoring.')
+                return NextResponse.json({ received: true })
+            }
+
+            // A. PAYMENT APPROVED
+            if (payment.status === 'approved') {
+                const subscription = await prisma.subscription.findUnique({
+                    where: { organizationId: orgId }
+                })
+
+                if (subscription) {
+                    // Update existing subscription
+                    const newPeriodEnd = new Date()
+                    newPeriodEnd.setDate(newPeriodEnd.getDate() + 30)
+
+                    // If there was a pending plan, check if we should promote it
+                    const dataToUpdate: any = {
+                        status: 'authorized',
+                        currentPeriodEnd: newPeriodEnd,
+                        lastPaymentDate: new Date(),
+                        paymentFailures: 0,
+                        gracePeriodUntil: null,
+                    }
+
+                    if (subscription.pendingPlan) {
+                        dataToUpdate.plan = subscription.pendingPlan
+                        dataToUpdate.amount = subscription.pendingPlanAmount
+                        dataToUpdate.pendingPlan = null
+                        dataToUpdate.pendingPlanAmount = null
+
+                        // Also update Org's plan and limits
+                        const limits = getPlanLimits(subscription.pendingPlan as any)
+                        await prisma.organization.update({
+                            where: { id: orgId },
+                            data: {
+                                subscriptionPlan: subscription.pendingPlan,
+                                subscriptionStatus: 'active',
+                                maxTables: limits.maxTables,
+                                maxUsers: limits.maxUsers
+                            }
+                        })
+                    }
+
+                    await prisma.subscription.update({
+                        where: { id: subscription.id },
+                        data: dataToUpdate
+                    })
+
+                    console.log(`Subscription extended for Org: ${orgId}. Next: ${newPeriodEnd.toDateString()}`)
+                } else {
+                    // This might be the FIRST payment (Creation logic)
+                    // (Old implementation logic simplified here or handled via metadata)
+                    // Since we already have orgs that paid, we should handle creation carefully.
+                    // For now, let's assume if no sub exists, it's a new flow.
+                    console.log('No subscription found for this payment. It might be a new organization registration.')
                 }
-            })
+            } 
+            
+            // B. PAYMENT REJECTED
+            if (payment.status === 'rejected') {
+                const sub = await prisma.subscription.findUnique({ where: { organizationId: orgId } })
+                if (sub) {
+                    const gracePeriodUntil = sub.gracePeriodUntil || new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+                    await prisma.subscription.update({
+                        where: { id: sub.id },
+                        data: {
+                            paymentFailures: { increment: 1 },
+                            gracePeriodUntil
+                        }
+                    })
+                }
+                console.log(`Payment failure recorded for Org: ${orgId}`)
+            }
 
-            return { organization, user }
-        })
+            return NextResponse.json({ received: true })
+        }
 
-        console.log('Successfully created Org and Admin!')
-        return NextResponse.json({ received: true, orgId: result.organization.id })
+        return NextResponse.json({ received: true })
 
     } catch (error: any) {
         console.error('Webhook Error:', error)

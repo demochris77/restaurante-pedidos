@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
-import { createMPSubscription, getPlanLimits, PLAN_PRICING, type PlanType } from '@/lib/mercadopago-subscriptions'
+import { createMPSubscription, updateMPSubscriptionAmount, PLAN_PRICING, type PlanType } from '@/lib/mercadopago-subscriptions'
 import { canDowngradeToPlan } from '@/lib/subscription-validation'
 
 /**
@@ -51,14 +51,18 @@ export async function POST(request: NextRequest) {
         }
 
         const currentPlan = currentUser.organization.subscriptionPlan
-        const isUpgrade = PLAN_PRICING[plan] > PLAN_PRICING[currentPlan as PlanType]
+        const isTrial = currentUser.organization.subscriptionStatus === 'trial'
+        
+        // Trial users must pay immediately to activate any plan.
+        // Paid users have ALL changes (up or down) scheduled for the next billing cycle.
+        const shouldPayNow = isTrial
 
         // Get current subscription
         const subscription = await prisma.subscription.findUnique({
             where: { organizationId: currentUser.organizationId }
         })
 
-        if (isUpgrade) {
+        if (shouldPayNow) {
             // Determine email to use
             let userEmail = session.user.email
             if (!userEmail) {
@@ -114,6 +118,8 @@ export async function POST(request: NextRequest) {
                 }, { status: 400 })
             }
 
+
+
             if (!subscription) {
                 return NextResponse.json(
                     { error: 'No active subscription found' },
@@ -121,7 +127,7 @@ export async function POST(request: NextRequest) {
                 )
             }
 
-            // Schedule downgrade for next billing cycle
+            // Schedule plan change for next billing cycle (Upgrades and Downgrades for paid users)
             await prisma.subscription.update({
                 where: { id: subscription.id },
                 data: {
@@ -130,9 +136,15 @@ export async function POST(request: NextRequest) {
                 }
             })
 
+            // Sync with Mercado Pago to update the amount for the next bill
+            if (subscription.preapprovalId) {
+                await updateMPSubscriptionAmount(subscription.preapprovalId, PLAN_PRICING[plan])
+            }
+
             return NextResponse.json({
                 success: true,
                 isUpgrade: false,
+                isImmediate: false,
                 message: 'Plan change scheduled for next billing cycle',
                 effectiveDate: subscription.nextBillingDate,
                 currentPlan,

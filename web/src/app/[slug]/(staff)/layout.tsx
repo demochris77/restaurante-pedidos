@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import Navbar from '@/components/dashboard/navbar'
+import { isSubscriptionActive } from '@/lib/subscription-limits'
+import { SubscriptionCheckClient } from '@/components/settings/subscription-check-client'
 
 export default async function StaffLayout({
     children,
@@ -24,7 +26,13 @@ export default async function StaffLayout({
     const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         include: {
-            organization: true
+            organization: {
+                include: {
+                    _count: {
+                        select: { users: true }
+                    }
+                }
+            }
         }
     })
 
@@ -33,15 +41,28 @@ export default async function StaffLayout({
         redirect('/login')
     }
 
+    // Check if subscription is active
+    const isActive = await isSubscriptionActive(user.organization.id)
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
             <Navbar
                 user={{
                     ...session.user,
                     id: user.id,
-                    hasSeenSettingsHint: (user as any).hasSeenSettingsHint
+                    hasSeenSettingsHint: (user as { hasSeenSettingsHint: boolean }).hasSeenSettingsHint
                 }}
                 slug={slug}
+                organization={{
+                    securityEnabled: user.organization.securityEnabled,
+                    securityMode: (user.organization as { securityMode: "static" | "dynamic" }).securityMode,
+                    securityCode: user.organization.securityCode
+                }}
+            />
+            <SubscriptionCheckClient 
+                slug={slug} 
+                isActive={isActive} 
+                isAdmin={user.role?.toLowerCase() === 'admin'} 
             />
             {children}
         </div>

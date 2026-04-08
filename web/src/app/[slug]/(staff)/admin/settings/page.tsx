@@ -43,6 +43,9 @@ interface Organization {
     id: string
     name: string
     tipPercentage: number
+    securityCode?: string
+    securityEnabled?: boolean
+    securityMode?: 'static' | 'dynamic'
 }
 
 export default function AdminSettingsPage() {
@@ -64,6 +67,7 @@ export default function AdminSettingsPage() {
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [deleteType, setDeleteType] = useState<'category' | 'payment' | 'cleanup' | null>(null)
     const [deleteId, setDeleteId] = useState<number | string | null>(null)
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
 
     useEffect(() => {
         fetchData()
@@ -154,27 +158,35 @@ export default function AdminSettingsPage() {
 
     const handleUpdateOrganization = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!organization) return
+        if (!organization || saveStatus === 'saving') return
 
+        setSaveStatus('saving')
         try {
             const res = await fetch('/api/organization', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: organization.name,
-                    tipPercentage: organization.tipPercentage
+                    tipPercentage: organization.tipPercentage,
+                    securityCode: organization.securityCode,
+                    securityEnabled: organization.securityEnabled,
+                    securityMode: organization.securityMode || 'static'
                 })
             })
 
             if (res.ok) {
-                // Simple feedback
                 const data = await res.json()
                 setOrganization(data)
-                alert(t('common.saved') || 'Saved successfully')
+                setSaveStatus('success')
+                setTimeout(() => setSaveStatus('idle'), 3000)
+            } else {
+                setSaveStatus('error')
+                setTimeout(() => setSaveStatus('idle'), 3000)
             }
         } catch (err) {
             console.error(err)
-            alert(t('common.error') || 'Error saving settings')
+            setSaveStatus('error')
+            setTimeout(() => setSaveStatus('idle'), 3000)
         }
     }
 
@@ -326,7 +338,7 @@ export default function AdminSettingsPage() {
                                     </label>
                                     <input
                                         type="text"
-                                        value={organization.name}
+                                        value={organization.name || ''}
                                         onChange={(e) => setOrganization({ ...organization, name: e.target.value })}
                                         className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-slate-900 dark:text-white"
                                     />
@@ -351,15 +363,114 @@ export default function AdminSettingsPage() {
                                         {t('admin.settings.organization.tip_help') || 'This percentage will be suggested to customers when paying.'}
                                     </p>
                                 </div>
+
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Seguridad de Pedidos</h4>
+                                            <p className="text-xs text-slate-500">Requerir código para segundos pedidos del mismo dispositivo</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOrganization({ ...organization, securityEnabled: !organization.securityEnabled })}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${organization.securityEnabled ? 'bg-orange-600' : 'bg-slate-200 dark:bg-slate-700'
+                                                }`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${organization.securityEnabled ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+
+                                    {organization.securityEnabled && (
+                                        <div className="animate-in slide-in-from-top-2 duration-200 space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                    Modo de Seguridad
+                                                </label>
+                                                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setOrganization({ ...organization, securityMode: 'static' })}
+                                                        className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${organization.securityMode === 'static' || !organization.securityMode
+                                                            ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm'
+                                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                                                            }`}
+                                                    >
+                                                        PIN Fijo
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setOrganization({ ...organization, securityMode: 'dynamic' })}
+                                                        className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${organization.securityMode === 'dynamic'
+                                                            ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm'
+                                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                                                            }`}
+                                                    >
+                                                        Código Rotativo
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                                    {organization.securityMode === 'dynamic' ? 'Secreto de Seguridad (Master)' : 'Código de activación (PIN)'}
+                                                </label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={organization.securityCode || ''}
+                                                        onChange={(e) => setOrganization({ ...organization, securityCode: e.target.value })}
+                                                        placeholder={organization.securityMode === 'dynamic' ? 'Secreto aleatorio...' : 'Ej: 1234'}
+                                                        className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-slate-900 dark:text-white font-mono"
+                                                    />
+                                                    {organization.securityMode === 'dynamic' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setOrganization({ ...organization, securityCode: Math.random().toString(36).substring(2, 12).toUpperCase() })}
+                                                            className="px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-300 transition-colors"
+                                                            title="Generar nuevo secreto"
+                                                        >
+                                                            <Database size={18} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 mt-1">
+                                                    {organization.securityMode === 'dynamic'
+                                                        ? 'El código que el cliente debe ingresar cambiará automáticamente cada minuto basándose en este secreto.'
+                                                        : 'Este código PIN fijo se pedirá si un cliente intenta hacer un pedido.'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+                            {saveStatus === 'success' && (
+                                <span className="text-sm font-bold text-green-600 flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-300">
+                                    <CheckCircle2 size={16} />
+                                    {t('common.saved') || 'Guardado exitosamente'}
+                                </span>
+                            )}
+                            {saveStatus === 'error' && (
+                                <span className="text-sm font-bold text-red-600 flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-300">
+                                    <XCircle size={16} />
+                                    {t('common.error') || 'Error al guardar'}
+                                </span>
+                            )}
                             <button
                                 type="submit"
-                                className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+                                disabled={saveStatus === 'saving'}
+                                className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-600/50 text-white font-medium rounded-lg transition-all shadow-sm"
                             >
-                                <Save size={18} />
+                                {saveStatus === 'saving' ? (
+                                    <Loader2 className="animate-spin" size={18} />
+                                ) : (
+                                    <Save size={18} />
+                                )}
                                 {t('common.save') || 'Save Changes'}
                             </button>
                         </div>

@@ -195,10 +195,65 @@ export default function RegisterPage() {
 
     const [submitting, setSubmitting] = useState(false)
 
+    const [plans, setPlans] = useState<any[]>([])
+    const [loadingPlans, setLoadingPlans] = useState(true)
+
+    // Fetch plans from DB
+    useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                const res = await fetch('/api/plans')
+                const data = await res.json()
+                if (Array.isArray(data)) {
+                    setPlans(data)
+                    // Set default plan to professional if exists
+                    const prof = data.find(p => p.slug === 'professional')
+                    if (prof) setFormData(prev => ({ ...prev, selectedPlan: 'professional' }))
+                    else if (data.length > 0) setFormData(prev => ({ ...prev, selectedPlan: data[0].slug }))
+                }
+            } catch (err) {
+                console.error('Error fetching plans:', err)
+            } finally {
+                setLoadingPlans(false)
+            }
+        }
+        fetchPlans()
+    }, [])
+
     const handleSubmit = async () => {
         setSubmitting(true)
         try {
-            // Call API to create Mercado Pago payment preference
+            const selectedPlan = plans.find(p => p.slug === formData.selectedPlan)
+            
+            if (selectedPlan?.hasTrial) {
+                // TRIAL FLOW
+                const response = await fetch('/api/register/trial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plan: formData.selectedPlan,
+                        restaurantName: formData.restaurantName,
+                        slug: formData.slug,
+                        contactEmail: formData.contactEmail,
+                        adminName: formData.adminName,
+                        username: formData.username,
+                        password: formData.password,
+                    }),
+                })
+
+                const data = await response.json()
+                if (response.ok) {
+                    // Redirect to a local success page instead of Mercado Pago
+                    window.location.href = `/register/success?orgId=${data.orgId}&trial=true`
+                } else {
+                    console.error('Error in trial registration:', data.error)
+                    alert(`Error: ${data.error || 'No se pudo procesar el registro de prueba.'}`)
+                    setSubmitting(false)
+                }
+                return
+            }
+
+            // PAYMENT FLOW (DEFAULT)
             const response = await fetch('/api/create-payment-preference', {
                 method: 'POST',
                 headers: {
@@ -239,11 +294,7 @@ export default function RegisterPage() {
         { number: 4, icon: Check, label: t('register.step.confirm') }
     ]
 
-    const plans = [
-        { id: 'basic', name: 'Starter', price: 60000, description: t('pricing.starter.description') },
-        { id: 'professional', name: 'Professional', price: 100000, description: t('pricing.professional.description') },
-        { id: 'enterprise', name: 'Enterprise', price: 400000, description: t('pricing.enterprise.description') }
-    ]
+    // Removed hardcoded plans array
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950">
@@ -556,27 +607,44 @@ export default function RegisterPage() {
                                     </h2>
 
                                     <div className="space-y-4">
-                                        {plans.map((plan) => (
-                                            <div
-                                                key={plan.id}
-                                                onClick={() => updateField('selectedPlan', plan.id)}
-                                                className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${formData.selectedPlan === plan.id
-                                                    ? 'border-orange-500 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20'
-                                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-                                                        <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">{plan.description}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-3xl font-black text-slate-900 dark:text-white">${plan.price}</div>
-                                                        <div className="text-sm text-slate-500 dark:text-slate-400">{t('register.step3.perMonth')}</div>
+                                        {loadingPlans ? (
+                                            <div className="flex flex-col items-center py-12">
+                                                <Loader2 className="animate-spin text-orange-600 mb-2" size={32} />
+                                                <p className="text-slate-500">{t('modal.loading')}</p>
+                                            </div>
+                                        ) : (
+                                            plans.map((plan) => (
+                                                <div
+                                                    key={plan.slug}
+                                                    onClick={() => updateField('selectedPlan', plan.slug)}
+                                                    className={`p-6 rounded-xl border-2 cursor-pointer transition-all relative ${formData.selectedPlan === plan.slug
+                                                        ? 'border-orange-500 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20'
+                                                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                                                        }`}
+                                                >
+                                                    {plan.hasTrial && (
+                                                        <div className="absolute -top-3 right-4 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                            {plan.trialDays} Días Gratis
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase">{plan.name}</h3>
+                                                                {plan.isRecommended && (
+                                                                    <span className="bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-full">RECOMENDADO</span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">{plan.features[0]}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-3xl font-black text-slate-900 dark:text-white">${plan.price.toLocaleString()}</div>
+                                                            <div className="text-sm text-slate-500 dark:text-slate-400">{t('register.step3.perMonth')}</div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -605,7 +673,7 @@ export default function RegisterPage() {
                                         <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg">
                                             <h3 className="font-semibold text-slate-900 dark:text-white mb-2">{t('register.step4.planSection')}</h3>
                                             <p className="text-slate-600 dark:text-slate-300">
-                                                {plans.find(p => p.id === formData.selectedPlan)?.name} - ${plans.find(p => p.id === formData.selectedPlan)?.price}{t('register.step3.perMonth')}
+                                                {plans.find(p => p.slug === formData.selectedPlan)?.name} - ${plans.find(p => p.slug === formData.selectedPlan)?.price.toLocaleString()}{t('register.step3.perMonth')}
                                             </p>
                                         </div>
                                     </div>

@@ -178,7 +178,7 @@ export async function POST(
                 }
             }
 
-            return { transaction, newStatus, isFullyPaid }
+            return { transaction, newStatus, isFullyPaid, order }
         })
 
         // Broadcast update
@@ -187,6 +187,7 @@ export async function POST(
             await publishOrderUpdate(user.organizationId!, 'order-update', {
                 type: 'payment-update',
                 orderId: id,
+                tableNumber: result.order.tableNumber,
                 transaction: result.transaction
             })
         } else {
@@ -194,6 +195,7 @@ export async function POST(
             await publishOrderUpdate(user.organizationId!, 'order-update', {
                 type: 'status-update',
                 orderId: id,
+                tableNumber: result.order.tableNumber,
                 status: 'pagado'
             })
         }

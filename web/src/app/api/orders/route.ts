@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import { validateStock, deductStock } from '@/lib/stock'
+import { publishOrderUpdate } from '@/lib/ably'
 
 export async function POST(req: NextRequest) {
     try {
@@ -175,6 +176,13 @@ export async function POST(req: NextRequest) {
                 return newOrder
             })
         }
+
+        // Broadcast order creation via Ably
+        await publishOrderUpdate(user.organizationId!, 'order-created', {
+            type: 'new-order',
+            orderId: order.id,
+            tableNumber: order.tableNumber
+        })
 
         return NextResponse.json(order)
 

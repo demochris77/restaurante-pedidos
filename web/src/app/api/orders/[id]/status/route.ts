@@ -110,7 +110,8 @@ export async function PUT(
         await publishOrderUpdate(user.organizationId!, 'order-update', {
             type: 'status-update',
             orderId: id,
-            status
+            status,
+            tableNumber: result.tableNumber
         })
 
         return NextResponse.json(result)

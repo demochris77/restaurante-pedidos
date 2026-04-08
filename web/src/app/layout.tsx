@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { LanguageProvider } from "@/components/providers/language-provider"
 import { SessionProvider } from "@/components/providers/session-provider"
+import { ServiceWorkerCleaner } from "@/components/ServiceWorkerCleaner"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
         <ThemeProvider>
           <SessionProvider>
             <LanguageProvider>
+              <ServiceWorkerCleaner />
               {children}
             </LanguageProvider>
           </SessionProvider>

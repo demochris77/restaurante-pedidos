@@ -31,7 +31,11 @@ interface PlanDefinition {
     price: number
     maxTables: number
     maxUsers: number
+    maxMenuItems: number | null
     features: string[]
+    isRecommended: boolean
+    hasTrial: boolean
+    trialDays: number
 }
 
 export default function PlansManagementPage() {
@@ -337,6 +341,89 @@ export default function PlansManagementPage() {
                                         ) : (
                                             <span className="text-lg font-black text-slate-900 dark:text-white">{plan.maxUsers}</span>
                                         )}
+                                    </div>
+                                    <div className="flex justify-between items-center bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-300 dark:border-slate-700">
+                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-300">Platos Máximos</span>
+                                        {editingPlanId === plan.id ? (
+                                            <input
+                                                type="number"
+                                                className="w-24 bg-white dark:bg-slate-700 border-2 border-slate-400 dark:border-slate-500 rounded-lg text-sm font-black text-right py-1 px-2 text-slate-900 dark:text-white"
+                                                value={editPlanForm.maxMenuItems || ''}
+                                                onChange={(e) => setEditPlanForm({ ...editPlanForm, maxMenuItems: e.target.value ? parseInt(e.target.value) : null })}
+                                                placeholder="Ilimitado"
+                                            />
+                                        ) : (
+                                            <span className="text-lg font-black text-slate-900 dark:text-white">{plan.maxMenuItems || '∞'}</span>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                className="w-5 h-5 rounded border-2 border-slate-300 text-orange-600 focus:ring-orange-500"
+                                                checked={editingPlanId === plan.id ? !!editPlanForm.isRecommended : !!plan.isRecommended}
+                                                disabled={editingPlanId !== plan.id}
+                                                onChange={(e) => setEditPlanForm({ ...editPlanForm, isRecommended: e.target.checked })}
+                                            />
+                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-orange-600 transition-colors">
+                                                Plan Recomendado
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                className="w-5 h-5 rounded border-2 border-slate-300 text-green-600 focus:ring-green-500"
+                                                checked={editingPlanId === plan.id ? !!editPlanForm.hasTrial : !!plan.hasTrial}
+                                                disabled={editingPlanId !== plan.id}
+                                                onChange={(e) => setEditPlanForm({ ...editPlanForm, hasTrial: e.target.checked })}
+                                            />
+                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-green-600 transition-colors">
+                                                Incluye Prueba de 7 días
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    {/* Edición de Funcionalidades */}
+                                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-2">Funcionalidades</p>
+                                        <div className="space-y-2">
+                                            {(editingPlanId === plan.id ? (editPlanForm.features || []) : (plan.features || [])).map((feature: string, idx: number) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs py-1 px-2 text-slate-900 dark:text-white"
+                                                        value={feature}
+                                                        disabled={editingPlanId !== plan.id}
+                                                        onChange={(e) => {
+                                                            const newFeatures = [...(editPlanForm.features || [])]
+                                                            newFeatures[idx] = e.target.value
+                                                            setEditPlanForm({ ...editPlanForm, features: newFeatures })
+                                                        }}
+                                                    />
+                                                    {editingPlanId === plan.id && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const newFeatures = (editPlanForm.features || []).filter((_: any, i: number) => i !== idx)
+                                                                setEditPlanForm({ ...editPlanForm, features: newFeatures })
+                                                            }}
+                                                            className="text-red-500 hover:text-red-700 p-1"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {editingPlanId === plan.id && (
+                                                <button
+                                                    onClick={() => setEditPlanForm({ ...editPlanForm, features: [...(editPlanForm.features || []), ''] })}
+                                                    className="w-full py-1 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-[10px] font-bold text-slate-500 hover:border-orange-500 hover:text-orange-500 transition-all"
+                                                >
+                                                    + Añadir Funcionalidad
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

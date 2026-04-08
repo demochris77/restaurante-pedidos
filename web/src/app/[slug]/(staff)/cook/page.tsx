@@ -66,6 +66,7 @@ export default function CookPanelPage() {
     const [categories, setCategories] = useState<Category[]>([])
     const [selectedCategories, setSelectedCategories] = useState<string[]>([])
     const [expandedTables, setExpandedTables] = useState<number[]>([])
+    const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
     const [now, setNow] = useState(Date.now())
 
     // Modal state
@@ -218,6 +219,16 @@ export default function CookPanelPage() {
         )
     }
 
+    const toggleItemExpansion = (tableNumber: number, menuItemId: string) => {
+        const key = `${tableNumber}-${menuItemId}`
+        setExpandedItems(prev => {
+            const next = new Set(prev)
+            if (next.has(key)) next.delete(key)
+            else next.add(key)
+            return next
+        })
+    }
+
     const toggleCategory = (categoryName: string) => {
         setSelectedCategories(prev =>
             prev.includes(categoryName)
@@ -282,7 +293,17 @@ export default function CookPanelPage() {
         }
     })
 
-    const activeTables = Object.values(tablesMap).sort((a, b) => a.tableNumber - b.tableNumber)
+    const allTables = Object.values(tablesMap).sort((a, b) => a.tableNumber - b.tableNumber)
+    
+    // A table is active if it has items that are not 'listo' and not 'servido'
+    const activeTables = allTables.filter(t => 
+        t.items.some(i => !['listo', 'servido'].includes(i.status))
+    )
+    
+    // A table is completed if all its items are 'listo' or 'servido'
+    const completedTables = allTables.filter(t => 
+        t.items.length > 0 && t.items.every(i => ['listo', 'servido'].includes(i.status))
+    )
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 lg:p-6 space-y-6">
@@ -396,8 +417,19 @@ export default function CookPanelPage() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className={`p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'bg-orange-100 text-orange-600 rotate-180' : 'bg-slate-50 text-slate-400'}`}>
-                                                        <ChevronDown size={20} />
+                                                    <div className="flex items-center gap-2">
+                                                        {!isExpanded && progress < 100 && (
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); handleCompleteAll(table.orderIds, table.items, table.tableNumber) }}
+                                                                className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors"
+                                                                title={t('kitchen.complete_all')}
+                                                            >
+                                                                <CheckCircle2 size={20} />
+                                                            </button>
+                                                        )}
+                                                        <div className={`p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'bg-orange-100 text-orange-600 rotate-180' : 'bg-slate-50 text-slate-400'}`}>
+                                                            <ChevronDown size={20} />
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -431,62 +463,186 @@ export default function CookPanelPage() {
                                             {/* Item List */}
                                             {isExpanded && (
                                                 <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50 dark:divide-slate-800/50 animate-in fade-in duration-300">
-                                                    {items.map(item => (
-                                                        <div key={item.id} className={`p-4 sm:p-5 flex flex-col gap-3 sm:gap-4 transition-colors ${item.status === 'listo' ? 'bg-green-50/30 dark:bg-green-900/5 opacity-60' : ''}`}>
-                                                            {/* Content Container (Qty + Text + Notes) */}
-                                                            <div className="flex items-start gap-3 sm:gap-4 w-full">
-                                                                <span className="w-8 h-8 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-sm font-black text-slate-900 dark:text-white mt-0.5">
-                                                                    {item.quantity}
-                                                                </span>
-                                                                <div className="space-y-2 min-w-0 flex-1">
-                                                                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                                                                        <h4 className="font-black text-slate-900 dark:text-white leading-tight break-words text-sm sm:text-base">{item.menuItem.name}</h4>
-                                                                        {['en_cocina', 'en_preparacion', 'nuevo', 'pendiente'].includes(item.status) && (
-                                                                            <span className="text-[10px] font-black text-orange-600 animate-pulse uppercase tracking-widest whitespace-nowrap bg-orange-50 dark:bg-orange-900/10 px-2 py-0.5 rounded-md border border-orange-100 dark:border-orange-900/20">{getTimeElapsed(item.startedAt || orders.find(o => o.items.some(i => i.id === item.id))?.createdAt || null)}</span>
+                                                    {(() => {
+                                                        const groupedItems = items.reduce((acc: any[], item) => {
+                                                            const existing = acc.find(i => i.menuItemId === item.menuItemId)
+                                                            if (existing) {
+                                                                existing.totalQuantity += item.quantity
+                                                                existing.items.push(item)
+                                                            } else {
+                                                                acc.push({
+                                                                    menuItemId: item.menuItemId,
+                                                                    name: item.menuItem.name,
+                                                                    totalQuantity: item.quantity,
+                                                                    items: [item]
+                                                                })
+                                                            }
+                                                            return acc
+                                                        }, [])
+
+                                                        return groupedItems.map(group => {
+                                                            const isItemExpanded = expandedItems.has(`${table.tableNumber}-${group.menuItemId}`)
+                                                            const hasNotes = group.items.some((i: any) => i.notes)
+                                                            const isSingle = group.totalQuantity === 1
+                                                            const singleItem = group.items[0]
+                                                            const allCompleted = group.items.every((i: any) => i.status === 'listo')
+
+                                                            if (isSingle) {
+                                                                return (
+                                                                    <div key={group.menuItemId} className="p-4 sm:p-5 flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="flex items-center gap-4">
+                                                                                <span className="w-8 h-8 shrink-0 bg-orange-100 dark:bg-orange-950/40 rounded-xl flex items-center justify-center text-sm font-black text-orange-600">
+                                                                                    1
+                                                                                </span>
+                                                                                <h4 className="font-black text-slate-900 dark:text-white leading-tight break-words text-sm sm:text-base">
+                                                                                    {group.name}
+                                                                                </h4>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-3">
+                                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                                                    {getTimeElapsed(singleItem.startedAt || orders.find(o => o.items.some(i => i.id === singleItem.id))?.createdAt || null)}
+                                                                                </span>
+                                                                                {['pendiente', 'nuevo', 'en_cocina', 'en_preparacion'].includes(singleItem.status) ? (
+                                                                                    <button
+                                                                                        onClick={() => updateItemStatus(singleItem.id, 'listo')}
+                                                                                        className="w-10 h-10 bg-green-600 text-white rounded-xl flex items-center justify-center transition-all shadow-lg shadow-green-600/20 hover:bg-green-700"
+                                                                                        title={t('kitchen.complete') || 'Listo'}
+                                                                                    >
+                                                                                        <CheckCircle2 size={20} />
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <div className="w-10 h-10 flex items-center justify-center text-green-600">
+                                                                                        <CheckCircle2 size={20} />
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        {singleItem.notes && (
+                                                                            <div className="ml-12 px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-start gap-2 border border-red-100 dark:border-red-900/30">
+                                                                                <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                                                                                <span className="text-xs text-red-600 font-bold uppercase break-words leading-tight">{singleItem.notes}</span>
+                                                                            </div>
                                                                         )}
                                                                     </div>
-                                                                    {item.notes && (
-                                                                        <div className="w-full px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-start gap-2 border border-red-100 dark:border-red-900/30">
-                                                                            <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
-                                                                            <span className="text-xs text-red-600 font-bold uppercase break-words leading-tight text-left flex-1">{item.notes}</span>
+                                                                )
+                                                            }
+
+                                                            return (
+                                                                <div key={group.menuItemId} className="flex flex-col border-b border-slate-100 dark:border-slate-800 last:border-0">
+                                                                    {/* Group Summary Row */}
+                                                                    <div className="flex items-center">
+                                                                        <button
+                                                                            onClick={() => toggleItemExpansion(table.tableNumber, group.menuItemId)}
+                                                                            className="flex-1 p-4 sm:p-5 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
+                                                                        >
+                                                                            <span className="w-8 h-8 shrink-0 bg-orange-100 dark:bg-orange-950/40 rounded-xl flex items-center justify-center text-sm font-black text-orange-600">
+                                                                                {group.totalQuantity}
+                                                                            </span>
+                                                                            <div className="flex-1">
+                                                                                <h4 className="font-black text-slate-900 dark:text-white leading-tight break-words text-sm sm:text-base">
+                                                                                    {group.name}
+                                                                                </h4>
+                                                                                {hasNotes && !isItemExpanded && (
+                                                                                    <span className="text-[10px] font-bold text-red-500 uppercase flex items-center gap-1 mt-1">
+                                                                                        <AlertCircle size={10} /> {t('common.notes')}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className={`p-1.5 rounded-full transition-transform duration-300 ${isItemExpanded ? 'bg-orange-100 text-orange-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}>
+                                                                                <ChevronDown size={16} />
+                                                                            </div>
+                                                                        </button>
+                                                                        
+                                                                        {!allCompleted && (
+                                                                            <div className="pr-4 sm:pr-5">
+                                                                                <button
+                                                                                    onClick={() => batchUpdateStatus(group.items.map((i: any) => i.id), 'listo')}
+                                                                                    className="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-200 transition-all border border-green-200"
+                                                                                    title={t('kitchen.complete_all') || 'Listo Todo'}
+                                                                                >
+                                                                                    <CheckCircle2 size={20} />
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Expanded Group Items */}
+                                                                    {isItemExpanded && (
+                                                                        <div className="bg-slate-50/50 dark:bg-slate-900/30 divide-y divide-slate-100 dark:divide-slate-800 px-4 pb-4 space-y-3">
+                                                                            {group.items.map((item: any) => (
+                                                                                <div key={item.id} className={`pt-3 flex flex-col gap-3 ${item.status === 'listo' ? 'opacity-60' : ''}`}>
+                                                                                    <div className="flex items-start gap-3">
+                                                                                        <span className="text-xs font-black text-slate-400 mt-0.5">#{item.id.split('-')[0].toUpperCase()}</span>
+                                                                                        <div className="flex-1 space-y-2">
+                                                                                            {item.notes && (
+                                                                                                <div className="px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-start gap-2 border border-red-100 dark:border-red-900/30">
+                                                                                                    <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                                                                                                    <span className="text-xs text-red-600 font-bold uppercase break-words leading-tight">{item.notes}</span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                            <div className="flex items-center justify-between gap-4">
+                                                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                                                                    {getTimeElapsed(item.startedAt || orders.find(o => o.items.some(i => i.id === item.id))?.createdAt || null)}
+                                                                                                </span>
+                                                                                                {['pendiente', 'nuevo', 'en_cocina', 'en_preparacion'].includes(item.status) ? (
+                                                                                                    <button
+                                                                                                        onClick={() => updateItemStatus(item.id, 'listo')}
+                                                                                                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-black text-[10px] uppercase transition-all shadow-lg shadow-green-600/20 hover:bg-green-700"
+                                                                                                    >
+                                                                                                        {t('kitchen.complete') || 'Listo'}
+                                                                                                    </button>
+                                                                                                ) : (
+                                                                                                    <div className="flex items-center gap-1.5 text-green-600 text-[10px] font-black uppercase">
+                                                                                                        <CheckCircle2 size={12} /> {t('common.ready') || 'Listo'}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                            </div>
-
-                                                            {/* Action Container (Button Full Width) */}
-                                                            <div className="w-full mt-1">
-                                                                {['pendiente', 'nuevo', 'en_cocina', 'en_preparacion'].includes(item.status) && (
-                                                                    <button
-                                                                        onClick={() => updateItemStatus(item.id, 'listo')}
-                                                                        className="w-full py-3 bg-green-600 text-white rounded-xl font-black text-xs uppercase transition-all shadow-lg shadow-green-600/20 hover:bg-green-700 active:scale-95 flex items-center justify-center gap-2"
-                                                                    >
-                                                                        {t('kitchen.complete') || 'Listo'}
-                                                                    </button>
-                                                                )}
-                                                                {['listo', 'servido'].includes(item.status) && (
-                                                                    <div className="w-full py-2 bg-green-50 dark:bg-green-900/10 text-green-600 rounded-xl flex items-center justify-center border border-green-100 dark:border-green-900/20">
-                                                                        <CheckCircle2 size={20} />
-                                                                        <span className="ml-2 text-xs font-bold uppercase">Listo</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                            )
+                                                        })
+                                                    })()}
                                                 </div>
                                             )}
 
                                             {!isExpanded && (
                                                 <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-950/20 flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
-                                                    {items.slice(0, 4).map(item => (
-                                                        <div key={item.id} className={`whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-bold ${item.status === 'listo' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-800'}`}>
-                                                            <span className={item.status === 'listo' ? 'text-green-600' : 'text-orange-600'}>{item.quantity}x</span>
-                                                            <span className="text-slate-600 dark:text-slate-400">{item.menuItem.name}</span>
-                                                        </div>
-                                                    ))}
-                                                    {items.length > 4 && (
-                                                        <span className="text-[10px] font-black text-slate-400 px-2">+{items.length - 4}</span>
-                                                    )}
+                                                    {(() => {
+                                                        const previewGroups = items.reduce((acc: any[], item) => {
+                                                            const existing = acc.find(i => i.menuItemId === item.menuItemId)
+                                                            if (existing) {
+                                                                existing.totalQuantity += item.quantity
+                                                            } else {
+                                                                acc.push({
+                                                                    menuItemId: item.menuItemId,
+                                                                    name: item.menuItem.name,
+                                                                    totalQuantity: item.quantity,
+                                                                    status: item.status
+                                                                })
+                                                            }
+                                                            return acc
+                                                        }, [])
+
+                                                        return (
+                                                            <>
+                                                                {previewGroups.slice(0, 4).map(group => (
+                                                                    <div key={group.menuItemId} className={`whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-bold ${group.status === 'listo' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-800'}`}>
+                                                                        <span className={group.status === 'listo' ? 'text-green-600' : 'text-orange-600'}>{group.totalQuantity}x</span>
+                                                                        <span className="text-slate-600 dark:text-slate-400">{group.name}</span>
+                                                                    </div>
+                                                                ))}
+                                                                {previewGroups.length > 4 && (
+                                                                    <span className="text-[10px] font-black text-slate-400 px-2">+{previewGroups.length - 4}</span>
+                                                                )}
+                                                            </>
+                                                        )
+                                                    })()}
                                                 </div>
                                             )}
                                         </div>
@@ -495,6 +651,82 @@ export default function CookPanelPage() {
                             </div>
                         )}
                     </div>
+
+                    {/* Completed Tables Section */}
+                    {completedTables.length > 0 && (
+                        <div className="lg:col-span-4 space-y-4 pt-10 border-t border-slate-200 dark:border-slate-800">
+                            <div className="flex items-center justify-between px-2">
+                                <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <CheckCircle2 size={16} /> {t('common.ready') || 'Completados'}
+                                </h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 opacity-75 grayscale hover:grayscale-0 transition-all duration-500">
+                                {completedTables.map(table => {
+                                    const isExpanded = expandedTables.includes(table.tableNumber)
+                                    const progress = getProgress(table.items)
+                                    return (
+                                        <div key={table.tableNumber} className={`bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all duration-500 ${isExpanded ? 'ring-2 ring-green-500/20' : ''}`}>
+                                            <div 
+                                                className="p-6 cursor-pointer select-none flex items-center justify-between"
+                                                onClick={() => toggleMesa(table.tableNumber)}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center border border-green-100 dark:border-green-800">
+                                                        <span className="text-lg font-black text-green-600">{table.tableNumber}</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{table.waiter}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <div className="w-16 h-1 bg-green-100 dark:bg-green-900/30 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-green-600" style={{ width: '100%' }} />
+                                                            </div>
+                                                            <span className="text-[10px] font-black text-green-600 uppercase">{t('common.ready') || 'Listo'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={`p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
+                                                    <ChevronDown size={18} />
+                                                </div>
+                                            </div>
+                                            {isExpanded && (
+                                                <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/20 p-4 space-y-2">
+                                                    {(() => {
+                                                        const grouped = table.items.reduce((acc: any[], item) => {
+                                                            const existing = acc.find(i => i.menuItemId === item.menuItemId)
+                                                            if (existing) {
+                                                                existing.totalQuantity += item.quantity
+                                                                // If any item is 'listo', group status is 'listo' (prioritize over 'servido' as it's more relevant for visibility)
+                                                                if (item.status === 'listo') existing.status = 'listo'
+                                                            } else {
+                                                                acc.push({
+                                                                    menuItemId: item.menuItemId,
+                                                                    name: item.menuItem.name,
+                                                                    totalQuantity: item.quantity,
+                                                                    status: item.status
+                                                                })
+                                                            }
+                                                            return acc
+                                                        }, [])
+
+                                                        return grouped.map(group => (
+                                                            <div key={group.menuItemId} className="flex items-center justify-between text-xs py-1">
+                                                                <span className="font-bold text-slate-600 dark:text-slate-400">
+                                                                    {group.totalQuantity}x {group.name}
+                                                                </span>
+                                                                <span className={`text-[10px] font-black uppercase ${group.status === 'servido' ? 'text-slate-400' : 'text-green-600'}`}>
+                                                                    {group.status === 'servido' ? t('common.served') || 'Servido' : t('common.ready') || 'Listo'}
+                                                                </span>
+                                                            </div>
+                                                        ))
+                                                    })()}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </Container>
 

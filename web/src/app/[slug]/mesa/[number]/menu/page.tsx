@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import {
@@ -13,7 +13,6 @@ import {
     ChevronLeft,
     Loader2,
     Activity,
-    AlertCircle,
     Scissors,
     Trash2,
     MessageSquarePlus
@@ -21,6 +20,7 @@ import {
 import Ably from 'ably'
 import { useLanguage } from '@/components/providers/language-provider'
 import { FloatingToggles } from '@/components/common/FloatingToggles'
+import { getSecurityStatus } from '../actions'
 
 interface MenuItem {
     id: string
@@ -56,7 +56,7 @@ export default function CustomerMenuPage() {
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [hasActiveOrder, setHasActiveOrder] = useState(false)
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             // Fetch menu items for this organization
             const res = await fetch(`/api/public/organization/menu?slug=${slug}`)
@@ -80,11 +80,24 @@ export default function CustomerMenuPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [slug, tableNumber])
 
     useEffect(() => {
-        fetchData()
-    }, [slug, tableNumber])
+        const checkAccess = async () => {
+            try {
+                const secStatus = await getSecurityStatus(slug, tableNumber)
+                if (secStatus.required) {
+                    router.replace(`/${slug}/mesa/${tableNumber}`)
+                    return
+                }
+                fetchData()
+            } catch (err) {
+                console.error('Access check failed:', err)
+                fetchData()
+            }
+        }
+        checkAccess()
+    }, [slug, tableNumber, router, fetchData])
 
     // Real-time stock updates
     useEffect(() => {

@@ -38,12 +38,15 @@ export async function POST(req: NextRequest) {
                 where: {
                     id: { in: itemIds },
                     order: { organizationId: user.organizationId! }
-                }
+                },
+                include: { order: true }
             })
 
             if (items.length !== itemIds.length) {
                 throw new Error('Some items were not found or belong to another organization')
             }
+
+            const tableNumbers = Array.from(new Set(items.map(i => i.order.tableNumber)))
 
             const updateData: any = { status }
             const now = new Date()
@@ -56,19 +59,22 @@ export async function POST(req: NextRequest) {
                 updateData.servedAt = now
             }
 
-            return await tx.orderItem.updateMany({
+            await tx.orderItem.updateMany({
                 where: {
                     id: { in: itemIds }
                 },
                 data: updateData
             })
+
+            return { tableNumbers }
         })
 
         // Broadcast update via Ably
         await publishOrderUpdate(user.organizationId!, 'order-update', {
             type: 'batch-item-update',
             itemIds,
-            status
+            status,
+            tableNumbers: result.tableNumbers
         })
 
         return NextResponse.json({ success: true, count: result.count })

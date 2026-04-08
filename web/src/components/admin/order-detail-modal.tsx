@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Receipt, Clock, User, Hash, Utensils, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
+import { X, Receipt, Clock, User, Hash, Utensils, CheckCircle2, AlertTriangle, Loader2, LayoutGrid, List } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useLanguage } from '@/components/providers/language-provider'
 import clsx from 'clsx'
@@ -17,6 +17,7 @@ export default function OrderDetailModal({ isOpen, onClose, orderId }: OrderDeta
     const [loading, setLoading] = useState(true)
     const [order, setOrder] = useState<any>(null)
     const [error, setError] = useState('')
+    const [isStacked, setIsStacked] = useState(true)
 
     useEffect(() => {
         if (isOpen && orderId) {
@@ -38,6 +39,24 @@ export default function OrderDetailModal({ isOpen, onClose, orderId }: OrderDeta
         } finally {
             setLoading(false)
         }
+    }
+
+    // Helper to group items by menuItemId
+    const getGroupedItems = () => {
+        if (!order?.items) return []
+        return order.items.reduce((acc: any[], item: any) => {
+            const existing = acc.find(i => i.menuItemId === item.menuItemId)
+            if (existing) {
+                existing.quantity += item.quantity
+                existing.totalPrice += Number(item.unitPrice) * item.quantity
+            } else {
+                acc.push({
+                    ...item,
+                    totalPrice: Number(item.unitPrice) * item.quantity
+                })
+            }
+            return acc
+        }, [])
     }
 
     if (!isOpen) return null
@@ -108,10 +127,19 @@ export default function OrderDetailModal({ isOpen, onClose, orderId }: OrderDeta
 
                             {/* Items Table */}
                             <div className="space-y-3">
-                                <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <Utensils size={18} />
-                                    {t('order_detail.items')}
-                                </h4>
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <Utensils size={18} />
+                                        {t('order_detail.items')}
+                                    </h4>
+                                    <button
+                                        onClick={() => setIsStacked(!isStacked)}
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
+                                    >
+                                        {isStacked ? <List size={14} /> : <LayoutGrid size={14} />}
+                                        {isStacked ? (t('order_detail.decouple') || 'Desacoplar') : (t('order_detail.stack') || 'Apilar')}
+                                    </button>
+                                </div>
                                 <div className="rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-100 dark:border-slate-800">
@@ -122,17 +150,20 @@ export default function OrderDetailModal({ isOpen, onClose, orderId }: OrderDeta
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                                            {order.items.map((item: any) => (
-                                                <tr key={item.id}>
+                                            {(isStacked ? getGroupedItems() : order.items).map((item: any) => (
+                                                <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                                                     <td className="px-4 py-3">
                                                         <p className="font-bold text-slate-900 dark:text-white">{item.menuItem.name}</p>
-                                                        {item.notes && <p className="text-xs text-slate-400 italic">"{item.notes}"</p>}
+                                                        {!isStacked && item.notes && <p className="text-xs text-slate-400 italic font-medium">“{item.notes}”</p>}
+                                                        {isStacked && order.items.filter((i: any) => i.menuItemId === item.menuItemId && i.notes).length > 0 && (
+                                                            <p className="text-[10px] text-orange-500 font-bold uppercase tracking-tighter mt-0.5">{t('order_detail.has_notes') || 'Tiene notas'}</p>
+                                                        )}
                                                     </td>
                                                     <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">
                                                         {item.quantity}
                                                     </td>
                                                     <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-white">
-                                                        {formatCurrency(Number(item.unitPrice) * item.quantity)}
+                                                        {formatCurrency(isStacked ? item.totalPrice : (Number(item.unitPrice) * item.quantity))}
                                                     </td>
                                                 </tr>
                                             ))}

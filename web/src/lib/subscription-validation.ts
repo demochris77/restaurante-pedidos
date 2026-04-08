@@ -7,12 +7,10 @@ import { type PlanType, getPlanLimits } from './mercadopago-subscriptions'
 export async function canDowngradeToPlan(organizationId: string, newPlan: PlanType) {
     const org = await prisma.organization.findUnique({
         where: { id: organizationId },
-        include: {
+        select: {
+            id: true,
             _count: {
-                select: {
-                    tables: true,
-                    users: true
-                }
+                select: { tables: true }
             }
         }
     })
@@ -28,9 +26,16 @@ export async function canDowngradeToPlan(organizationId: string, newPlan: PlanTy
         }
     }
 
+    // Count only non-admin users
+    const currentUsers = await prisma.user.count({
+        where: { 
+            organizationId,
+            role: { not: 'admin' }
+        }
+    })
+
     const newLimits = getPlanLimits(newPlan)
     const currentTables = org._count.tables
-    const currentUsers = org._count.users
 
     const canDowngrade = currentTables <= newLimits.maxTables && currentUsers <= newLimits.maxUsers
 

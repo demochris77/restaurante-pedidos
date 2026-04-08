@@ -105,12 +105,9 @@ export async function getOrganizationWithUsage(organizationId: string) {
 
     if (!organization) return null
 
-    const limitTables = organization.maxTables ?? 0 // Use 0 or handle null if strictly limited but null means unlimited usually? 
-    // In checkTableLimit, null means unlimited. 
     const isTablesUnlimited = organization.maxTables === null || organization.maxTables === undefined
     const tablesCount = organization._count.tables
 
-    const limitUsers = organization.maxUsers ?? 0
     const isUsersUnlimited = organization.maxUsers === null || organization.maxUsers === undefined
     const usersCount = organization._count.users
 
@@ -134,6 +131,49 @@ export async function getOrganizationWithUsage(organizationId: string) {
             }
         }
     }
+}
+
+/**
+ * Checks if the organization's subscription is currently active or within trial.
+ * Returns true if the account is allowed to operate.
+ */
+export async function isSubscriptionActive(organizationId: string): Promise<boolean> {
+    const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        include: {
+            subscription: true
+        }
+    })
+
+    if (!org) return false
+
+    // Explicitly blocked by superadmin
+    if (org.subscriptionStatus === 'blocked') return false
+
+    // If in trial, check if it has expired
+    if (org.subscriptionStatus === 'trial') {
+        if (!org.trialEndsAt) return true // Should have a date, but allow if missing for safety
+        const now = new Date()
+        return new Date(org.trialEndsAt) >= now
+    }
+
+    // If it's a paid plan, check the subscription period
+    if (org.subscription) {
+        const now = new Date()
+        const periodEnd = new Date(org.subscription.currentPeriodEnd)
+        
+        // Define a grace period (e.g., 5 days) where they can still use the app
+        const gracePeriodDays = 5
+        const gracePeriodEnd = new Date(periodEnd.getTime() + gracePeriodDays * 24 * 60 * 60 * 1000)
+
+        // Block if now is past the grace period
+        if (now > gracePeriodEnd) {
+            return false
+        }
+    }
+
+    // Active or within grace period
+    return true
 }
 
 export async function getMenuItemCount(organizationId: string) {

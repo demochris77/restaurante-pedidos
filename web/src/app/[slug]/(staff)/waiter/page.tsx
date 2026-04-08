@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import {
     Activity,
     CheckCircle2,
+    ChevronDown,
     Trash2,
     Edit3,
     ClipboardList,
@@ -12,6 +13,7 @@ import {
 import { useLanguage } from '@/components/providers/language-provider'
 import ConfirmationModal from '@/components/ui/confirmation-modal'
 import QRModal from '@/components/staff/QRModal'
+import { ReadyItem } from './components/ReadyItems'
 
 import { TableSelection } from './components/TableSelection'
 import { CartOverlay } from './components/CartOverlay'
@@ -89,6 +91,7 @@ export default function WaiterPage() {
     const [orderToCancel, setOrderToCancel] = useState<string | null>(null)
     const [isSendToCashierModalOpen, setIsSendToCashierModalOpen] = useState(false)
     const [orderToSendToCashier, setOrderToSendToCashier] = useState<any | null>(null)
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
     // QR State
     const [isMenuQRModalOpen, setIsMenuQRModalOpen] = useState(false)
@@ -158,7 +161,7 @@ export default function WaiterPage() {
                 const err = await res.json()
                 setNotification({ type: 'error', message: err.error || 'Failed to cancel order' })
             }
-        } catch (error) {
+        } catch (err) {
             setNotification({ type: 'error', message: t('waiter.error_cancelling_order') || 'Error cancelling order' })
         } finally {
             setIsSubmitting(false)
@@ -185,7 +188,7 @@ export default function WaiterPage() {
                 const err = await res.json()
                 setNotification({ type: 'error', message: err.error || 'Failed to send to cashier' })
             }
-        } catch (error) {
+        } catch (err) {
             setNotification({ type: 'error', message: t('waiter.status_update_failed') || 'Error updating status' })
         } finally {
             setIsSubmitting(false)
@@ -206,7 +209,7 @@ export default function WaiterPage() {
                 const err = await res.json()
                 setNotification({ type: 'error', message: err.error || t('waiter.take_order_error') || 'Error claiming order' })
             }
-        } catch (error) {
+        } catch (err) {
             setNotification({ type: 'error', message: t('waiter.take_order_error') })
         } finally {
             setIsSubmitting(false)
@@ -228,13 +231,13 @@ export default function WaiterPage() {
                 console.error('Failed to update status')
                 setNotification({ type: 'error', message: t('waiter.status_update_failed') })
             }
-        } catch (error) {
-            console.error('Error updating status:', error)
+        } catch (err) {
+            console.error('Error updating status:', err)
             setNotification({ type: 'error', message: t('waiter.status_update_failed') })
         }
     }
 
-    const handleServeAll = async (items: any[]) => {
+    const handleServeAll = async (items: ReadyItem[]) => {
         setIsSubmitting(true)
         try {
             // Sequential updates for now (simple implementation)
@@ -248,8 +251,8 @@ export default function WaiterPage() {
             ))
             setNotification({ type: 'success', message: t('waiter.all_served') || 'All items served' })
             fetchData()
-        } catch (error) {
-            console.error('Error serving all:', error)
+        } catch (err) {
+            console.error('Error serving all:', err)
             setNotification({ type: 'error', message: t('waiter.error_serving') })
         } finally {
             setIsSubmitting(false)
@@ -257,10 +260,10 @@ export default function WaiterPage() {
     }
 
     // Derived state: Ready Items
-    const readyItems = activeOrders.flatMap(order =>
+    const readyItems: ReadyItem[] = activeOrders.flatMap(order =>
         order.items
-            .filter((item: any) => item.status === 'listo')
-            .map((item: any) => ({ ...item, order }))
+            .filter((item: ReadyItem) => item.status === 'listo')
+            .map((item: ReadyItem) => ({ ...item, order }))
     )
 
     // --- CART LOGIC ---
@@ -409,10 +412,35 @@ export default function WaiterPage() {
         ? menuItems
         : menuItems.filter(item => item.category === selectedCategory)
 
-    // Get current items for editing
+    // Get current items for editing and group them
     const currentOrderItems = activeOrderId
         ? activeOrders.find(o => o.id === activeOrderId)?.items || []
         : []
+
+    const groupedCurrentItems = currentOrderItems.reduce((acc: any[], item: any) => {
+        const existing = acc.find(i => i.menuItemId === item.menuItemId)
+        if (existing) {
+            existing.totalQuantity += item.quantity
+            existing.items.push(item)
+        } else {
+            acc.push({
+                menuItemId: item.menuItemId,
+                name: item.menuItem?.name,
+                totalQuantity: item.quantity,
+                items: [item]
+            })
+        }
+        return acc
+    }, [])
+
+    const toggleGroup = (id: string) => {
+        setExpandedGroups(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
 
     // Helper to update existing item note
     const saveExistingItemNote = async (itemId: string) => {
@@ -430,7 +458,7 @@ export default function WaiterPage() {
             } else {
                 setNotification({ type: 'error', message: t('waiter.note_update_failed') || 'Failed to update note' })
             }
-        } catch (error) {
+        } catch (err) {
             setNotification({ type: 'error', message: t('waiter.note_update_error') || 'Error updating note' })
         }
     }
@@ -487,7 +515,6 @@ export default function WaiterPage() {
                                 readyItems={readyItems}
                                 t={t}
                                 handleServeAll={handleServeAll}
-                                handleUpdateItemStatus={handleUpdateItemStatus}
                                 isSubmitting={isSubmitting}
                             />
                             <ActiveOrders
@@ -501,6 +528,8 @@ export default function WaiterPage() {
                                     setIsSendToCashierModalOpen(true)
                                 }}
                                 onClaimOrder={handleClaimOrder}
+                                onServeItem={(itemId) => handleUpdateItemStatus(itemId, 'servido')}
+                                onServeAll={handleServeAll}
                                 slug={slug}
                             />
                         </div>
@@ -518,82 +547,106 @@ export default function WaiterPage() {
                                     {t('waiter.current_items') || 'Current Items'}
                                 </h3>
                                 <div className="space-y-3">
-                                    {currentOrderItems.map((item: any) => (
-                                        <div key={item.id} className="bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div>
-                                                    <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">
-                                                        {item.quantity}x
+                                    {groupedCurrentItems.map((group: any) => (
+                                        <div key={group.menuItemId} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+                                            {/* Group Header */}
+                                            <button
+                                                onClick={() => toggleGroup(group.menuItemId)}
+                                                className="w-full flex justify-between items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black text-orange-600 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded text-xs">
+                                                        {group.totalQuantity}x
                                                     </span>
-                                                    <span className="text-sm text-slate-600 dark:text-slate-300 ml-2">
-                                                        {item.menuItem?.name}
+                                                    <span className="font-bold text-slate-800 dark:text-white text-sm">
+                                                        {group.name}
                                                     </span>
                                                 </div>
-                                                {/* Status Badge */}
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase border ${item.status === 'listo' ? 'bg-green-100 text-green-700 border-green-200' :
-                                                    item.status === 'en_cocina' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                                        'bg-slate-100 text-slate-600 border-slate-200'
-                                                    }`}>
-                                                    {t(`status.${item.status}`)}
-                                                </span>
-                                            </div>
+                                                <div className="flex items-center gap-2 text-slate-400">
+                                                    {group.items.some((i: any) => i.notes) && <Edit3 size={14} className="text-orange-500" />}
+                                                    <ChevronDown size={18} className={`transition-transform duration-300 ${expandedGroups.has(group.menuItemId) ? 'rotate-180' : ''}`} />
+                                                </div>
+                                            </button>
 
-                                            {/* Edit Notes for existing item */}
-                                            <div className="mt-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-2 border border-slate-100 dark:border-slate-800">
-                                                {editingNoteId === item.id ? (
-                                                    <div className="flex flex-col gap-2">
-                                                        <textarea
-                                                            value={tempNoteValue}
-                                                            onChange={(e) => setTempNoteValue(e.target.value)}
-                                                            className="w-full text-xs p-2 bg-white dark:bg-slate-800 border-2 border-slate-400 dark:border-slate-500 rounded-md focus:outline-none focus:border-orange-500 min-h-[60px] text-slate-900 dark:text-white shadow-sm font-medium"
-                                                            placeholder={t('waiter.add_note_placeholder')}
-                                                            autoFocus
-                                                        />
-                                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                                            <button
-                                                                onClick={() => setEditingNoteId(null)}
-                                                                className="w-full py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors"
-                                                            >
-                                                                {t('modal.cancel')}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => saveExistingItemNote(item.id)}
-                                                                className="w-full py-2.5 text-xs font-bold bg-orange-600 text-white rounded-lg hover:bg-orange-700 shadow-sm transition-colors"
-                                                            >
-                                                                {t('modal.save')}
-                                                            </button>
+                                            {/* Individual Items Loop (Expanded) */}
+                                            {expandedGroups.has(group.menuItemId) && (
+                                                <div className="border-t border-slate-50 dark:border-slate-700 divide-y divide-slate-50 dark:divide-slate-700/50 bg-slate-50/30 dark:bg-slate-900/10 animate-in fade-in slide-in-from-top-1">
+                                                    {group.items.map((item: any) => (
+                                                        <div key={item.id} className="p-3">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <div>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">
+                                                                        {item.quantity}x
+                                                                    </span>
+                                                                    <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+                                                                        ID: {item.id.split('-')[0].toUpperCase()}
+                                                                    </span>
+                                                                </div>
+                                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase border ${item.status === 'listo' ? 'bg-green-100 text-green-700 border-green-200' :
+                                                                    item.status === 'en_cocina' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                                                        'bg-slate-100 text-slate-600 border-slate-200'
+                                                                    }`}>
+                                                                    {t(`status.${item.status}`)}
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="mt-2 bg-white dark:bg-slate-800 rounded-lg p-2 border border-slate-100 dark:border-slate-700 shadow-sm">
+                                                                {editingNoteId === item.id ? (
+                                                                    <div className="flex flex-col gap-2">
+                                                                        <textarea
+                                                                            value={tempNoteValue}
+                                                                            onChange={(e) => setTempNoteValue(e.target.value)}
+                                                                            className="w-full text-xs p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:border-orange-500 min-h-[60px] text-slate-900 dark:text-white font-medium"
+                                                                            placeholder={t('waiter.add_note_placeholder')}
+                                                                            autoFocus
+                                                                        />
+                                                                        <div className="grid grid-cols-2 gap-2 mt-1">
+                                                                            <button
+                                                                                onClick={() => setEditingNoteId(null)}
+                                                                                className="py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"
+                                                                            >
+                                                                                {t('modal.cancel')}
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => saveExistingItemNote(item.id)}
+                                                                                className="py-1.5 text-xs font-bold bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                                                                            >
+                                                                                {t('modal.save')}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <p className="text-xs text-slate-500 italic flex-1 truncate">
+                                                                            {item.notes || t('waiter.no_notes')}
+                                                                        </p>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setEditingNoteId(item.id)
+                                                                                    setTempNoteValue(item.notes || '')
+                                                                                }}
+                                                                                className="p-1.5 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-md"
+                                                                            >
+                                                                                <Edit3 size={16} />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setItemToDelete(item.id)
+                                                                                    setIsDeleteModalOpen(true)
+                                                                                }}
+                                                                                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md"
+                                                                            >
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-xs text-slate-500 italic flex-1 truncate">
-                                                            {item.notes || t('waiter.no_notes')}
-                                                        </p>
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingNoteId(item.id)
-                                                                    setTempNoteValue(item.notes || '')
-                                                                }}
-                                                                title={t('waiter.edit')}
-                                                                className="text-orange-600 hover:text-orange-700 p-2 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors border border-orange-100 dark:border-orange-900/40"
-                                                            >
-                                                                <Edit3 size={20} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setItemToDelete(item.id)
-                                                                    setIsDeleteModalOpen(true)
-                                                                }}
-                                                                title={t('modal.delete')}
-                                                                className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-100 dark:border-red-900/40"
-                                                            >
-                                                                <Trash2 size={20} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

@@ -30,7 +30,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
         if (params) {
             Object.entries(params).forEach(([paramKey, paramValue]) => {
-                text = text.replace(`{${paramKey}}`, String(paramValue))
+                const regex = new RegExp(`\\{\\{${paramKey}\\}\\}|\\{${paramKey}\\}`, 'g')
+                text = text.replace(regex, String(paramValue))
             })
         }
         return text

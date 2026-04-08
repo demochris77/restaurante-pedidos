@@ -16,10 +16,10 @@ import {
     ArrowLeft,
     ChevronRight,
     Plus,
-    Trash2
+    Trash2,
+    Shield
 } from 'lucide-react'
-import { signIn, signOut } from 'next-auth/react' // Client-side signIn/signOut
-import { Button } from '@/components/ui/button' // We might need to create this or use raw HTML
+import { signIn, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { useLanguage } from '@/components/providers/language-provider'
@@ -39,9 +39,14 @@ interface User {
 interface NavbarProps {
     user: User
     slug: string
+    organization?: {
+        securityEnabled: boolean
+        securityMode: 'static' | 'dynamic'
+        securityCode?: string | null
+    }
 }
 
-export default function Navbar({ user, slug }: NavbarProps) {
+export default function Navbar({ user, slug, organization }: NavbarProps) {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const [menuView, setMenuView] = useState<'main' | 'accounts'>('main')
     const [showHint, setShowHint] = useState(user.role === 'admin' && !user.hasSeenSettingsHint)
@@ -140,11 +145,6 @@ export default function Navbar({ user, slug }: NavbarProps) {
 
     const roleName = user.role || 'Usuario'
 
-    const toggleLanguage = () => {
-        setLanguage(language === 'es' ? 'en' : 'es')
-        setIsUserMenuOpen(false) // Close menu after selection
-    }
-
     const handleOpenUserMenu = async () => {
         setIsUserMenuOpen(!isUserMenuOpen)
         if (showHint && user.id) {
@@ -170,19 +170,57 @@ export default function Navbar({ user, slug }: NavbarProps) {
         }
     }, [isUserMenuOpen])
 
+    // TOTP Logic for Staff
+    const [currentOTP, setCurrentOTP] = useState<string>('')
+    
+    useEffect(() => {
+        if (!organization?.securityEnabled || !organization?.securityCode) {
+            if (currentOTP !== '') setCurrentOTP('')
+            return
+        }
+        
+        if (organization.securityMode !== 'dynamic') {
+            setCurrentOTP(organization.securityCode)
+            return
+        }
+
+        const updateOTP = async () => {
+            const code = await calculateBrowserOTP(organization.securityCode!, 60)
+            setCurrentOTP(code)
+        }
+
+        updateOTP()
+        const interval = setInterval(updateOTP, 1000) // Update often to stay fresh
+        return () => clearInterval(interval)
+    }, [organization])
+
     return (
         <nav className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 flex items-center shadow-sm">
             <div className="max-w-[1600px] w-full mx-auto px-4 flex justify-between items-center">
                 {/* Left Side: Brand & Status */}
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-500">
-                            <UtensilsCrossed size={18} />
+                    {user.role === 'admin' ? (
+                        <Link
+                            href={`/${slug}/admin/dashboard`}
+                            className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-500 group-hover:scale-105 transition-transform">
+                                <UtensilsCrossed size={18} />
+                            </div>
+                            <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight hidden sm:block">
+                                Restaurante
+                            </h1>
+                        </Link>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-500">
+                                <UtensilsCrossed size={18} />
+                            </div>
+                            <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight hidden sm:block">
+                                Restaurante
+                            </h1>
                         </div>
-                        <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight hidden sm:block">
-                            Restaurante
-                        </h1>
-                    </div>
+                    )}
 
                     <div
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${isConnected
@@ -193,6 +231,21 @@ export default function Navbar({ user, slug }: NavbarProps) {
                         {isConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
                         <span className="hidden sm:inline">{isConnected ? t('nav.online') : t('nav.offline')}</span>
                     </div>
+
+                    {/* Security Code Badge for Staff */}
+                    {organization?.securityEnabled && currentOTP && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/20 border-2 border-orange-200 dark:border-orange-900/40 rounded-xl shadow-[0_0_15px_rgba(234,88,12,0.1)] animate-in fade-in zoom-in duration-300">
+                            <div className="flex items-center justify-center p-1 bg-orange-100 dark:bg-orange-900/40 rounded-lg">
+                                <Shield size={16} className="text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <span className="text-lg font-mono font-black text-orange-600 dark:text-orange-500 tabular-nums leading-none tracking-tight">
+                                {currentOTP}
+                            </span>
+                            {organization.securityMode === 'dynamic' && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-orange-600 dark:bg-orange-500 animate-pulse" />
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Side: Role & User Menu */}
@@ -394,7 +447,7 @@ export default function Navbar({ user, slug }: NavbarProps) {
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{account.name}</p>
                                                             <div className="flex items-center gap-1.5">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
                                                                 <p className="text-[10px] text-green-600 dark:text-green-400 uppercase font-medium">{t('status.active') || 'Activo'}</p>
                                                             </div>
                                                         </div>
@@ -452,4 +505,50 @@ export default function Navbar({ user, slug }: NavbarProps) {
             </div>
         </nav>
     )
+}
+
+/**
+ * Browsers-side TOTP calculation using SubtleCrypto
+ */
+async function calculateBrowserOTP(secret: string, interval: number): Promise<string> {
+    try {
+        const time = Math.floor(Date.now() / 1000 / interval)
+        const timeBuf = new ArrayBuffer(8)
+        const view = new DataView(timeBuf)
+        
+        // Use BigInt for the time counter
+        view.setBigInt64(0, BigInt(time), false)
+
+        const encoder = new TextEncoder()
+        const keyData = encoder.encode(secret)
+        
+        const cryptoKey = await window.crypto.subtle.importKey(
+            'raw',
+            keyData,
+            { name: 'HMAC', hash: 'SHA-1' },
+            false,
+            ['sign']
+        )
+
+        const signature = await window.crypto.subtle.sign(
+            'HMAC',
+            cryptoKey,
+            timeBuf
+        )
+
+        const digest = new Uint8Array(signature)
+        const offset = digest[digest.length - 1] & 0xf
+        const binary = (
+            ((digest[offset] & 0x7f) << 24) |
+            ((digest[offset + 1] & 0xff) << 16) |
+            ((digest[offset + 2] & 0xff) << 8) |
+            (digest[offset + 3] & 0xff)
+        )
+
+        const otp = binary % 1000000
+        return otp.toString().padStart(6, '0')
+    } catch (e) {
+        console.error('OTP Error:', e)
+        return 'ERR'
+    }
 }

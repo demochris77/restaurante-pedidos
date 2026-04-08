@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { validateStock, deductStock } from '@/lib/stock'
 import { publishOrderUpdate } from '@/lib/ably'
+import { getVisitorId } from '@/lib/visitor-auth'
 
 export async function POST(req: NextRequest) {
     try {
@@ -128,10 +129,11 @@ export async function POST(req: NextRequest) {
                 })
             } else {
                 // Create new order
-                orderResult = await tx.order.create({
+                orderResult = await (tx.order as any).create({
                     data: {
                         tableNumber: parseInt(tableNumber),
                         organizationId: organization.id,
+                        visitorId: await getVisitorId(),
                         total: subtotal,
                         subtotal: subtotal,
                         status: 'nuevo',

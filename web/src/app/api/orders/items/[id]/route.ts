@@ -183,7 +183,8 @@ export async function PATCH(
             type: 'item-update',
             itemId: id,
             status: status,
-            notes: notes
+            notes: notes,
+            tableNumber: orderItem.order.tableNumber
         })
 
         return NextResponse.json(resultItem)

@@ -30,6 +30,8 @@ export async function GET() {
                     price: def.price,
                     maxTables: def.maxTables,
                     maxUsers: def.maxUsers,
+                    // Note: We DON'T update isRecommended or hasTrial here 
+                    // to allow manual management from the dashboard
                 },
                 create: {
                     slug,
@@ -37,6 +39,9 @@ export async function GET() {
                     price: def.price,
                     maxTables: def.maxTables,
                     maxUsers: def.maxUsers,
+                    isRecommended: false,
+                    hasTrial: false,
+                    trialDays: 7,
                     features: [def.description]
                 }
             })

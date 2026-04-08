@@ -7,97 +7,79 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==========================================================
-// SAAS CORE (NEW)
-// ==========================================================
-
 model Organization {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique // For navigation: app.com/restaurante-slug/login
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Subscription limits
-  subscriptionPlan   String   @default("basic") @map("subscription_plan") // basic, professional, enterprise
-  subscriptionStatus String   @default("trial") @map("subscription_status") // trial, active, past_due, blocked, cancelled
-  trialEndsAt        DateTime? @map("trial_ends_at")
-  maxTables          Int      @default(5) @map("max_tables")
-  maxUsers           Int      @default(3) @map("max_users")
-  maxMenuItems       Int?     @map("max_menu_items") // Subscription limit
-
-  // Organization details
-  nit           String?  @map("nit")
-  phone         String?  @map("phone")
-  phoneCountry  String?  @default("+57") @map("phone_country")
-  email         String?  @map("email")
-  tipPercentage Int      @default(10) @map("tip_percentage")
-
-  // Relationships
-  users        User[]
-  menuItems    MenuItem[]
-  tables       Table[]
-  orders       Order[]
-  inventory    InventoryItem[]
-  categories   Category[]
-  paymentMethods PaymentMethod[]
-  config       Config[]
-  subscription Subscription?
+  id                 String          @id @default(uuid())
+  name               String
+  slug               String          @unique
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  subscriptionPlan   String          @default("basic") @map("subscription_plan")
+  subscriptionStatus String          @default("trial") @map("subscription_status")
+  trialEndsAt        DateTime?       @map("trial_ends_at")
+  maxTables          Int             @default(5) @map("max_tables")
+  maxUsers           Int             @default(3) @map("max_users")
+  maxMenuItems       Int?            @map("max_menu_items")
+  nit                String?         @map("nit")
+  phone              String?         @map("phone")
+  phoneCountry       String?         @default("+57") @map("phone_country")
+  email              String?         @map("email")
+  tipPercentage      Int             @default(10) @map("tip_percentage")
+  securityCode       String?         @map("security_code")
+  securityEnabled    Boolean         @default(false) @map("security_enabled")
+  securityMode       String          @default("static") @map("security_mode") // "static" | "dynamic"
+  categories         Category[]
+  config             Config[]
+  inventory          InventoryItem[]
+  menuItems          MenuItem[]
+  tables             Table[]
+  paymentMethods     PaymentMethod[]
+  orders             Order[]
+  subscription       Subscription?
+  users              User[]
 
   @@map("organizations")
 }
 
-// ==========================================================
-// MIGRATED MODELS (Mapped to existing tables)
-// ==========================================================
-
 model User {
-  id             String    @id @default(uuid())
-  username       String?   @unique // Optional for OAuth users
-  password       String?   // Optional for OAuth users
-  name           String?   @map("nombre")
-  email          String?   @unique
-  emailVerified  DateTime? @map("email_verified")
-  image          String?
-  role           String    @default("user") @map("rol") // admin, mesero, cocinero, cajero
-  language       String?   @default("es")
-  isBanned       Boolean   @default(false) @map("is_banned")
-  hasSeenSettingsHint Boolean @default(false) @map("has_seen_settings_hint")
-  switchToken    String?   @unique @map("switch_token") // For seamless account switching
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  
-  // Organization (SaaS)
-  organizationId String?   @map("organization_id")
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-
-  // Auth Rel
-  accounts       Account[]
-  sessions       Session[]
-
-  // Relationships
-  orders         Order[]   @relation("WaiterOrders")
-  transactions   Transaction[]
-  pushSubscriptions PushSubscription[]
+  id                  String             @id @default(uuid())
+  username            String?            @unique
+  password            String?
+  name                String?            @map("nombre")
+  email               String?            @unique
+  emailVerified       DateTime?          @map("email_verified")
+  image               String?
+  role                String             @default("user") @map("rol")
+  language            String?            @default("es")
+  switchToken         String?            @unique @map("switch_token")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  organizationId      String?            @map("organization_id")
+  hasSeenSettingsHint Boolean            @default(false) @map("has_seen_settings_hint")
+  isBanned            Boolean            @default(false) @map("is_banned")
+  accounts            Account[]
+  orders              Order[]            @relation("WaiterOrders")
+  pushSubscriptions   PushSubscription[]
+  sessions            Session[]
+  transactions        Transaction[]
+  organization        Organization?      @relation(fields: [organizationId], references: [id])
 
   @@map("usuarios")
 }
 
 model Account {
-  id                 String  @id @default(uuid())
-  userId             String  @map("user_id")
-  type               String
-  provider           String
-  providerAccountId  String  @map("provider_account_id")
-  refresh_token      String? @db.Text
-  access_token       String? @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String? @db.Text
-  session_state      String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -123,51 +105,41 @@ model VerificationToken {
 }
 
 model MenuItem {
-  id              String   @id @default(uuid())
-  name            String   @map("nombre")
-  category        String   @map("categoria")
-  categoryRel     Category? @relation(fields: [category], references: [name])
-  price           Decimal  @map("precio") @db.Decimal(10, 2)
-  estimatedTime   Int      @default(15) @map("tiempo_estimado")
-  minPrepTime     Int      @default(15) @map("tiempo_preparacion_min")
-  available       Boolean  @default(true) @map("disponible")
-  description     String?  @map("descripcion")
-  
-  // Inventory fields
-  useInventory    Boolean  @default(false) @map("usa_inventario")
-  currentStock    Int?     @map("stock_actual")
-  minStock        Int?     @map("stock_minimo")
-  inventoryStatus String?  @default("disponible") @map("estado_inventario") // disponible, poco_stock, no_disponible
-  
-  imageUrl        String?  @map("image_url") @db.VarChar(500)
-  legacyImage     String?  @map("imagen_url") // Old text field
-  isDirect        Boolean  @default(false) @map("es_directo") // Doesn't go to kitchen?
-  
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @map("updated_at")
-
-  // Organization (SaaS)
-  organizationId  String?  @map("organization_id")
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-
-  // Relationships
-  orderItems      OrderItem[]
+  id              String           @id @default(uuid())
+  name            String           @map("nombre")
+  category        String           @map("categoria")
+  price           Decimal          @map("precio") @db.Decimal(10, 2)
+  estimatedTime   Int              @default(15) @map("tiempo_estimado")
+  minPrepTime     Int              @default(15) @map("tiempo_preparacion_min")
+  available       Boolean          @default(true) @map("disponible")
+  description     String?          @map("descripcion")
+  useInventory    Boolean          @default(false) @map("usa_inventario")
+  currentStock    Int?             @map("stock_actual")
+  minStock        Int?             @map("stock_minimo")
+  inventoryStatus String?          @default("disponible") @map("estado_inventario")
+  imageUrl        String?          @map("image_url") @db.VarChar(500)
+  legacyImage     String?          @map("imagen_url")
+  isDirect        Boolean          @default(false) @map("es_directo")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @default(now()) @map("updated_at")
+  organizationId  String?          @map("organization_id")
   ingredients     DishIngredient[]
   timeStats       ItemTimeStat[]
+  categoryRel     Category         @relation(fields: [category], references: [name])
+  organization    Organization?    @relation(fields: [organizationId], references: [id])
+  orderItems      OrderItem[]
 
   @@map("menu_items")
 }
 
 model Table {
-  id            Int      @id @default(autoincrement())
-  number        Int      @map("numero")
-  capacity      Int      @default(4)
-  status        String   @default("disponible") @map("estado") // disponible, ocupada, reservada
-  isBlockable   Boolean  @default(true) @map("is_blockable") // Config: Si la mesa se puede bloquear
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  // Organization (SaaS)
-  organizationId String? @map("organization_id")
+  id             Int           @id @default(autoincrement())
+  number         Int           @map("numero")
+  capacity       Int           @default(4)
+  status         String        @default("disponible") @map("estado")
+  isBlockable    Boolean       @default(true) @map("is_blockable")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  organizationId String?       @map("organization_id")
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@unique([number, organizationId], name: "unique_table_per_org")
@@ -175,115 +147,99 @@ model Table {
 }
 
 model Order {
-  id              String   @id @default(uuid())
-  tableNumber     Int      @map("mesa_numero")
-  waiterId        String?  @map("usuario_mesero_id")
-  total           Decimal  @db.Decimal(10, 2)
-  subtotal        Decimal  @default(0) @db.Decimal(10, 2)
-  tipAmount       Decimal  @default(0) @map("propina_monto") @db.Decimal(10, 2)
-  tipPercentage   Int      @default(0) @map("propina_porcentaje")
-  status          String   @default("nuevo") @map("estado") // nuevo, en_cocina, listo, servido, listo_pagar, en_caja, pagado, cancelado
-  notes           String?  @map("notas")
-  
-  createdAt       DateTime @default(now()) @map("created_at")
-  startedAt       DateTime? @map("started_at")
-  deliveredAt     DateTime? @map("delivered_at")
-  completedAt     DateTime? @map("completed_at")
-
-  // Organization (SaaS)
-  organizationId  String?  @map("organization_id")
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-
-  // Relationships
-  waiter          User?    @relation("WaiterOrders", fields: [waiterId], references: [id])
-  items           OrderItem[]
-  transactions    Transaction[]
+  id             String        @id @default(uuid())
+  tableNumber    Int           @map("mesa_numero")
+  waiterId       String?       @map("usuario_mesero_id")
+  total          Decimal       @db.Decimal(10, 2)
+  subtotal       Decimal       @default(0) @db.Decimal(10, 2)
+  tipAmount      Decimal       @default(0) @map("propina_monto") @db.Decimal(10, 2)
+  tipPercentage  Int           @default(0) @map("propina_porcentaje")
+  status         String        @default("nuevo") @map("estado")
+  notes          String?       @map("notas")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  startedAt      DateTime?     @map("started_at")
+  deliveredAt    DateTime?     @map("delivered_at")
+  completedAt    DateTime?     @map("completed_at")
+  organizationId String?       @map("organization_id")
+  visitorId      String?       @map("visitor_id")
+  items          OrderItem[]
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  waiter         User?         @relation("WaiterOrders", fields: [waiterId], references: [id])
+  transactions   Transaction[]
 
   @@map("pedidos")
 }
 
 model OrderItem {
-  id              String   @id @default(uuid())
-  orderId         String   @map("pedido_id")
-  menuItemId      String   @map("menu_item_id")
-  quantity        Int      @default(1) @map("cantidad")
-  unitPrice       Decimal  @map("precio_unitario") @db.Decimal(10, 2)
-  notes           String?  @map("notas")
-  status          String   @default("pendiente") @map("estado") // pendiente, en_preparacion, listo, servido
-  
-  startedAt       DateTime? @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-  servedAt        DateTime? @map("served_at")
-  realTime        Int?     @map("tiempo_real")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  // Relationships
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem        MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  transactionId   String?  @map("transaction_id")
-  transaction     Transaction? @relation(fields: [transactionId], references: [id])
+  id            String       @id @default(uuid())
+  orderId       String       @map("pedido_id")
+  menuItemId    String       @map("menu_item_id")
+  quantity      Int          @default(1) @map("cantidad")
+  unitPrice     Decimal      @map("precio_unitario") @db.Decimal(10, 2)
+  notes         String?      @map("notas")
+  status        String       @default("pendiente") @map("estado")
+  startedAt     DateTime?    @map("started_at")
+  completedAt   DateTime?    @map("completed_at")
+  servedAt      DateTime?    @map("served_at")
+  realTime      Int?         @map("tiempo_real")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  transactionId String?      @map("transaction_id")
+  menuItem      MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  order         Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
 
   @@map("pedido_items")
 }
 
 model InventoryItem {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String
-  unit         String   @default("kg")
-  currentStock Decimal  @default(0) @map("current_stock") @db.Decimal(10, 4)
-  minStock     Decimal  @default(0) @map("min_stock") @db.Decimal(10, 4)
-  costPerUnit  Decimal  @default(0) @map("cost_per_unit") @db.Decimal(10, 2)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @map("updated_at")
-
-  // Organization (SaaS)
-  organizationId String? @map("organization_id")
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-
-  // Relationships
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String
+  unit            String           @default("kg")
+  currentStock    Decimal          @default(0) @map("current_stock") @db.Decimal(10, 4)
+  minStock        Decimal          @default(0) @map("min_stock") @db.Decimal(10, 4)
+  costPerUnit     Decimal          @default(0) @map("cost_per_unit") @db.Decimal(10, 2)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @default(now()) @map("updated_at")
+  organizationId  String?          @map("organization_id")
   dishIngredients DishIngredient[]
+  organization    Organization?    @relation(fields: [organizationId], references: [id])
 
   @@map("inventory_items")
 }
 
 model DishIngredient {
-  id              Int      @id @default(autoincrement())
-  menuItemId      String   @map("menu_item_id")
-  inventoryItemId String   @map("inventory_item_id") @db.Uuid
-  quantityRequired Decimal @map("quantity_required") @db.Decimal(10, 4)
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  // Relationships
-  menuItem        MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  id               Int           @id @default(autoincrement())
+  menuItemId       String        @map("menu_item_id")
+  inventoryItemId  String        @map("inventory_item_id") @db.Uuid
+  quantityRequired Decimal       @map("quantity_required") @db.Decimal(10, 4)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  inventoryItem    InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  menuItem         MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([menuItemId, inventoryItemId])
   @@map("dish_ingredients")
 }
 
 model Category {
-  id           Int      @id @default(autoincrement())
-  name         String   @unique
-  active       Boolean  @default(true)
-  displayOrder Int      @default(0) @map("display_order")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  // Organization (SaaS)
-  organizationId String? @map("organization_id")
+  id             Int           @id @default(autoincrement())
+  name           String        @unique
+  active         Boolean       @default(true)
+  displayOrder   Int           @default(0) @map("display_order")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  organizationId String?       @map("organization_id")
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  menuItems      MenuItem[]
 
   @@map("categories")
-  menuItems    MenuItem[]
 }
 
 model PaymentMethod {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique  // slug-like: efectivo, tarjeta, nequi
-  label     String?  // Display name: "Efectivo", "Tarjeta Débito/Crédito"
-  active    Boolean  @default(true)
-  isDigital Boolean  @default(false) @map("is_digital")
-  createdAt DateTime @default(now()) @map("created_at")
-  
+  id             Int          @id @default(autoincrement())
+  name           String       @unique
+  label          String?
+  active         Boolean      @default(true)
+  isDigital      Boolean      @default(false) @map("is_digital")
+  createdAt      DateTime     @default(now()) @map("created_at")
   organizationId String       @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -291,129 +247,104 @@ model PaymentMethod {
 }
 
 model Transaction {
-  id              String   @id @default(uuid())
-  orderId         String   @map("pedido_id")
-  cashierId       String?  @map("usuario_facturero_id")
-  amount          Decimal  @map("monto") @db.Decimal(10, 2)
-  tipAmount       Decimal  @default(0) @map("monto_propina") @db.Decimal(10, 2)
-  paymentMethod   String   @map("metodo_pago")
-  reference       String?  @map("referencia_transaccion")
-  completed       Boolean  @default(false) @map("completada")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  // Relationships
-  order           Order    @relation(fields: [orderId], references: [id])
-  cashier         User?    @relation(fields: [cashierId], references: [id])
-  items           OrderItem[]
+  id            String      @id @default(uuid())
+  orderId       String      @map("pedido_id")
+  cashierId     String?     @map("usuario_facturero_id")
+  amount        Decimal     @map("monto") @db.Decimal(10, 2)
+  tipAmount     Decimal     @default(0) @map("monto_propina") @db.Decimal(10, 2)
+  paymentMethod String      @map("metodo_pago")
+  reference     String?     @map("referencia_transaccion")
+  completed     Boolean     @default(false) @map("completada")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  items         OrderItem[]
+  order         Order       @relation(fields: [orderId], references: [id])
+  cashier       User?       @relation(fields: [cashierId], references: [id])
 
   @@map("transacciones")
 }
 
 model PushSubscription {
-  id          Int      @id @default(autoincrement())
-  userId      String?  @map("user_id")
-  role        String
-  endpoint    String
-  keysP256dh  String   @map("keys_p256dh")
-  keysAuth    String   @map("keys_auth")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @map("updated_at")
+  id         Int      @id @default(autoincrement())
+  userId     String?  @map("user_id")
+  role       String
+  endpoint   String
+  keysP256dh String   @map("keys_p256dh")
+  keysAuth   String   @map("keys_auth")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, endpoint], map: "push_subscriptions_user_id_endpoint_key")
+  @@unique([userId, endpoint])
   @@map("push_subscriptions")
 }
 
-// Config table is key-value, often global or per org? 
-// For SaaS, key should be unique PER organization.
 model Config {
-  key         String   @id @map("clave") // Legacy PK was key only
-  value       String?  @map("valor")
-  
-  // Organization (SaaS) - This breaks current PK if we want multi-tenant config in same table.
-  // We might need to change PK to (organizationId, key) or add an ID.
-  // For now, let's assume this table might need a migration to Composite PK.
-  organizationId String? @map("organization_id")
+  key            String        @id @map("clave")
+  value          String?       @map("valor")
+  organizationId String?       @map("organization_id")
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@map("configuracion")
-  // @@id([organizationId, key]) // Future goal
 }
 
 model ItemTimeStat {
-  id                    Int      @id @default(autoincrement())
-  menuItemId            String   @map("menu_item_id")
-  date                  DateTime @map("fecha") @db.Date
-  totalPreparations     Int      @default(0) @map("total_preparaciones")
-  avgTimeSeconds        Int      @default(0) @map("tiempo_promedio")
-  avgTimeMinutes        Decimal  @default(0) @map("tiempo_promedio_minutos") @db.Decimal(5, 2)
-  minTimeSeconds        Int?     @map("tiempo_minimo")
-  minTimeMinutes        Int?     @map("tiempo_minimo_minutos")
-  maxTimeSeconds        Int?     @map("tiempo_maximo")
-  maxTimeMinutes        Int?     @map("tiempo_maximo_minutos")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @default(now()) @map("updated_at")
-
-  menuItem              MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  id                Int      @id @default(autoincrement())
+  menuItemId        String   @map("menu_item_id")
+  date              DateTime @map("fecha") @db.Date
+  totalPreparations Int      @default(0) @map("total_preparaciones")
+  avgTimeSeconds    Int      @default(0) @map("tiempo_promedio")
+  avgTimeMinutes    Decimal  @default(0) @map("tiempo_promedio_minutos") @db.Decimal(5, 2)
+  minTimeSeconds    Int?     @map("tiempo_minimo")
+  minTimeMinutes    Int?     @map("tiempo_minimo_minutos")
+  maxTimeSeconds    Int?     @map("tiempo_maximo")
+  maxTimeMinutes    Int?     @map("tiempo_maximo_minutos")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @map("updated_at")
+  menuItem          MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([menuItemId, date])
   @@map("item_time_stats")
 }
 
-// ==========================================================
-// SUBSCRIPTION (Mercadopago Integration)
-// ==========================================================
-
 model Subscription {
-  id                   String   @id @default(uuid())
-  organizationId       String   @unique @map("organization_id")
-  plan                 String   // basic, professional, enterprise
-  status               String   // pending, authorized, paused, cancelled
-  
-  // Mercado Pago
-  paymentProvider      String   @default("mercadopago") @map("payment_provider")
-  preapprovalId        String?  @unique @map("preapproval_id") // MP subscription ID
-  customerId           String?  @map("customer_id")
-  amount               Float?   // Monthly amount in ARS
-  
-  // Billing cycle
-  currentPeriodStart   DateTime @default(now()) @map("current_period_start")
-  currentPeriodEnd     DateTime @map("current_period_end")
-  nextBillingDate      DateTime? @map("next_billing_date")
-  lastPaymentDate      DateTime? @map("last_payment_date")
-  
-  // Payment tracking
-  paymentFailures      Int      @default(0) @map("payment_failures")
-  gracePeriodUntil     DateTime? @map("grace_period_until")
-  
-  // Plan changes (applies next billing cycle)
-  pendingPlan          String?  @map("pending_plan")
-  pendingPlanAmount    Float?   @map("pending_plan_amount")
-  cancelAtPeriodEnd    Boolean  @default(false) @map("cancel_at_period_end")
-  
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                 String       @id @default(uuid())
+  organizationId     String       @unique @map("organization_id")
+  plan               String
+  status             String
+  paymentProvider    String       @default("mercadopago") @map("payment_provider")
+  preapprovalId      String?      @unique @map("preapproval_id")
+  customerId         String?      @map("customer_id")
+  amount             Float?
+  currentPeriodStart DateTime     @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime     @map("current_period_end")
+  nextBillingDate    DateTime?    @map("next_billing_date")
+  lastPaymentDate    DateTime?    @map("last_payment_date")
+  paymentFailures    Int          @default(0) @map("payment_failures")
+  gracePeriodUntil   DateTime?    @map("grace_period_until")
+  pendingPlan        String?      @map("pending_plan")
+  pendingPlanAmount  Float?       @map("pending_plan_amount")
+  cancelAtPeriodEnd  Boolean      @default(false) @map("cancel_at_period_end")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
-// ==========================================================
-// GLOBAL SETTINGS
-// ==========================================================
 
 model PlanDefinition {
-  id            String   @id @default(uuid())
-  slug          String   @unique // basic, professional, enterprise
-  name          String
-  price         Decimal  @db.Decimal(10, 2)
-  maxTables     Int
-  maxUsers      Int
-  maxMenuItems  Int?
-  features      String[] @default([])
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  name         String
+  price        Decimal  @db.Decimal(10, 2)
+  maxTables    Int
+  maxUsers     Int
+  maxMenuItems Int?
+  features     String[] @default([])
+  isRecommended Boolean  @default(false) @map("is_recommended")
+  hasTrial     Boolean  @default(false) @map("has_trial")
+  trialDays    Int      @default(7) @map("trial_days")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("plan_definitions")
 }

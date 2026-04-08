@@ -120,7 +120,7 @@ export default function CashierPage() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
             {/* Header */}
-            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 px-4 py-4 shadow-sm">
+            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-16 z-10 px-4 py-4 shadow-sm">
                 <div className="flex flex-col gap-4 max-w-7xl mx-auto">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-6">

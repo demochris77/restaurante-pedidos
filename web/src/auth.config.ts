@@ -12,12 +12,12 @@ export const authConfig = {
             const role = auth?.user?.role;
 
             const isAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname.startsWith('/register');
+            const pathSegments = nextUrl.pathname.split('/');
+            const isPublicCustomerRoute = pathSegments.length >= 3 && ['mesa', 'menu', 'receipt'].includes(pathSegments[2]);
+
             const isPublicPage = nextUrl.pathname === '/' ||
-                nextUrl.pathname === '/pricing' ||
-                nextUrl.pathname === '/about' ||
-                nextUrl.pathname === '/contact' ||
-                nextUrl.pathname === '/terms' ||
-                nextUrl.pathname === '/privacy';
+                ['/pricing', '/about', '/contact', '/terms', '/privacy'].includes(nextUrl.pathname) ||
+                isPublicCustomerRoute;
 
             // 1. Si no está logueado y trata de entrar a cualquier cosa que no sea pública o auth, al login
             if (!isLoggedIn && !isPublicPage && !isAuthPage) {

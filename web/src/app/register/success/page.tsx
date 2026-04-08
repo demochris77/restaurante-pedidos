@@ -23,12 +23,14 @@ function SuccessContent() {
         return () => clearTimeout(timer)
     }, [])
 
+    const isTrial = searchParams.get('trial') === 'true'
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 flex items-center justify-center">
                 <div className="text-center">
                     <Loader2 className="w-16 h-16 text-orange-600 dark:text-orange-500 animate-spin mx-auto mb-4" />
-                    <p className="text-slate-600 dark:text-slate-300">{t('loading.processing')}</p>
+                    <p className="text-slate-600 dark:text-slate-300">{isTrial ? 'Creando tu cuenta...' : t('loading.processing')}</p>
                 </div>
             </div>
         )
@@ -46,23 +48,23 @@ function SuccessContent() {
                         </div>
 
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4">
-                            {t('payment.success.title')}
+                            {isTrial ? t('payment.trial.title') : t('payment.success.title')}
                         </h1>
 
                         <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                            {t('payment.success.subtitle')}
+                            {isTrial ? t('payment.trial.subtitle') : t('payment.success.subtitle')}
                         </p>
 
                         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 mb-8">
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-                                {t('payment.success.steps')}
+                                {isTrial ? t('payment.trial.steps') : t('payment.success.steps')}
                             </h2>
                             <div className="text-left space-y-3 text-slate-600 dark:text-slate-300">
-                                <p>✅ {t('payment.success.step1')}</p>
-                                <p>✅ {t('payment.success.step2')}</p>
-                                <p>✅ {t('payment.success.step3')}</p>
+                                <p>✅ {isTrial ? t('payment.trial.step1') : t('payment.success.step1')}</p>
+                                <p>✅ {isTrial ? t('payment.trial.step2') : t('payment.success.step2')}</p>
+                                <p>✅ {isTrial ? t('payment.trial.step3') : t('payment.success.step3')}</p>
                                 <p className="mt-6 font-semibold text-slate-900 dark:text-white">
-                                    {t('payment.success.message')}
+                                    {isTrial ? t('payment.trial.message') : t('payment.success.message')}
                                 </p>
                             </div>
                         </div>
@@ -71,7 +73,7 @@ function SuccessContent() {
                             href="/dashboard"
                             className="inline-flex items-center gap-2 px-8 py-4 bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-bold rounded-lg transition-colors shadow-lg"
                         >
-                            {t('payment.success.button')}
+                            {isTrial ? t('payment.trial.button') : t('payment.success.button')}
                         </Link>
                     </div>
                 </Container>
